@@ -42,6 +42,7 @@ export default defineConfig(async (env) => {
         }
       ],
       build: {
+        sourcemap: false,
         outDir: 'lib',
         target: 'esnext',
         minify: true,
