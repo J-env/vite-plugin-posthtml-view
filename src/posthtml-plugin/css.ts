@@ -64,7 +64,7 @@ export function postcssParser(
                 case 'scoped':
                   selectorRoot.walk((node) => {
                     if (node.type === 'class' || node.type === 'tag') {
-                      const isGlobal = pseudoIsGlobal(node.parent) || pseudoIsGlobal(node.parent?.parent)
+                      const isGlobal = pseudoIsGlobal(node.parent) || pseudoIsGlobal(node.parent && node.parent.parent)
 
                       if (!isGlobal) {
                         view.scopedClasses[node.value] = true
@@ -78,7 +78,7 @@ export function postcssParser(
 
                 case 'module':
                   selectorRoot.walkClasses((classNode) => {
-                    const isGlobal = pseudoIsGlobal(classNode.parent) || pseudoIsGlobal(classNode.parent?.parent)
+                    const isGlobal = pseudoIsGlobal(classNode.parent) || pseudoIsGlobal(classNode.parent && classNode.parent.parent)
 
                     if (!isGlobal) {
                       const slug = classNameSlug(classNode.value)
@@ -94,7 +94,7 @@ export function postcssParser(
                 // 动态样式 非 ssr
                 case 'dynamic':
                   selectorRoot.walkClasses((classNode) => {
-                    const isGlobal = pseudoIsGlobal(classNode.parent) || pseudoIsGlobal(classNode.parent?.parent)
+                    const isGlobal = pseudoIsGlobal(classNode.parent) || pseudoIsGlobal(classNode.parent && classNode.parent.parent)
 
                     if (!isGlobal) {
                       const slug = classNameSlug(classNode.value)

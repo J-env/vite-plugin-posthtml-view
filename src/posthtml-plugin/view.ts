@@ -652,7 +652,7 @@ export class ViewComponent {
     // 查找当前作用域组件 然后查找全局组件
     switch (view_query) {
       case 'parent':
-        return this.parent?.components[tag]
+        return this.parent ? this.parent.components[tag] : undefined
 
       case 'parents':
         return this.queryParents(this.parent, tag) || this.options.components[tag]

@@ -60,7 +60,7 @@ export default defineConfig(async (env) => {
         },
         rollupOptions: {
           // 确保外部化处理那些你不想打包进库的依赖
-          external: Object.keys(dependencies),
+          external: Object.keys({ ...dependencies }),
         }
       }
     }
