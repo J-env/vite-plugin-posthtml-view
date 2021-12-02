@@ -1,5 +1,7 @@
 # vite-plugin-posthtml-view
 
+PHP applications require PHP installed
+
 <div align="center">
   <img width="830" height="380" title="posthtml-view" src="./posthtml-view.png">
 </div>
