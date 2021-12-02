@@ -17,16 +17,16 @@ export function postcssParser(
   view: ViewComponent,
   styled: StyledOptions
 ) {
-  const componentName = view.componentName || ''
+  const slugSrc = view.slugSrc || ''
 
   const scopedHash = styled.type === 'scoped'
-    ? toValidCSSIdentifier(slugify(`${componentName}${css}:${styled.type}`))
+    ? toValidCSSIdentifier(slugify(`${slugSrc}${css}:${styled.type}`))
     : ''
 
   const ast = postcssSafeParser(css)
 
   const classNameSlug = (title: string) => {
-    const hash = toValidCSSIdentifier(slugify(`${componentName}${title}:${css}:${styled.type}`))
+    const hash = toValidCSSIdentifier(slugify(`${slugSrc}${title}:${css}:${styled.type}`))
     let className = hash
 
     if (typeof styled.classNameSlug === 'function') {

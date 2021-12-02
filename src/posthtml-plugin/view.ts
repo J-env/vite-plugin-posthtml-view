@@ -139,6 +139,7 @@ export class ViewComponent {
   isRoot: boolean = false
 
   componentName!: string
+  slugSrc: string = ''
 
   scopedHash!: string
   scopedClasses: Record<string, boolean> = {}
@@ -256,12 +257,18 @@ export class ViewComponent {
       return node
     })
 
+    const jsPrefix = this.prefix('js')
+
     tree.match(match('script'), (node) => {
       node.attrs = (node.attrs || {})
 
       let src = node.attrs.src
 
-      if (src && /^(https?:)?\/\//.test(src)) {
+      if (
+        ((src && /^(https?:)?\/\//.test(src)) ||
+          node.attrs.type === 'module') &&
+        !(jsPrefix in node.attrs)
+      ) {
         return node
       }
 
@@ -639,6 +646,10 @@ export class ViewComponent {
     const { root, from, encoding } = this.options
 
     const filePath = path.join(path.isAbsolute(src) ? root : path.dirname(from), src)
+
+    if (filePath.endsWith('.html')) {
+      this.slugSrc = filePath.replace(root, '').replace('.html', '')
+    }
 
     return fse.readFile(filePath, encoding)
   }

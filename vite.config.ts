@@ -76,7 +76,8 @@ export default defineConfig(async (env) => {
 
   return {
     server: {
-      open: '/view/index.html'
+      open: '/view/index.html',
+      port: 3001
     },
     resolve: {
       alias: {
