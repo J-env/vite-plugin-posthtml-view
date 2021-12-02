@@ -2,7 +2,6 @@
   "name": "vite-plugin-posthtml-view",
   "version": "0.0.1-alpha.0",
   "description": "",
-  "private": true,
   "keywords": [
     "vite",
     "vite-plugin",
