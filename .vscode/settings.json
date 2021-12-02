@@ -1,0 +1,55 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.stylelint": true
+  },
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  },
+  "html.customData": [
+    "./components.json",
+    "./posthtml-view.json",
+  ],
+  "files.associations": {
+    // "*.html": "php",
+    "*.html": "html"
+  },
+  "html.format.endWithNewline": false,
+  "html.format.extraLiners": "script",
+  "html.format.templating": true,
+  "html.format.unformatted": "style",
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "stylelint.enable": true,
+  "stylelint.ignoreDisables": true,
+  "stylelint.snippet": [
+    "css",
+    "less",
+    "postcss",
+    "scss",
+    "html"
+  ],
+  "stylelint.validate": [
+    "css",
+    "html",
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "less",
+    "markdown",
+    "postcss",
+    "sass",
+    "scss",
+    "source.css.styled",
+    "source.markdown.math",
+    "styled-css",
+    "sugarss",
+    "svelte",
+    "vue",
+    "vue-html",
+    "vue-postcss",
+    "xml",
+    "xsl"
+  ]
+}

@@ -1,0 +1,27 @@
+<layout-base>
+  <div>
+    php render
+    <?= $hello ?>
+  </div>
+
+  <div>
+    <my-button>button 1</my-button>
+  </div>
+
+  <view:component src="./_demo/register-components.html">
+    <template slot="bottom">
+      <div>this is bottom slot</div>
+    </template>
+
+    <div>this is defult slot</div>
+  </view:component>
+
+  <script type="module" src="/example/index.ts"></script>
+
+</layout-base>
+
+<style global>
+  body {
+    padding-bottom: 100px;
+  }
+</style>

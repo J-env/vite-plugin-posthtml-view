@@ -1,0 +1,15 @@
+{
+  "version": 1.1,
+  "tags": [
+    {
+      "name": "layout-base",
+      "description": "layout-base",
+      "attributes": []
+    },
+    {
+      "name": "my-button",
+      "description": "my-button",
+      "attributes": []
+    }
+  ]
+}

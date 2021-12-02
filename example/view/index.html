@@ -1,0 +1,25 @@
+<view:components>
+  <view:register tag="view-layout" src="./_layout.html"></view:register>
+</view:components>
+
+<view-layout title="view:layout">
+  <template slot="header">
+    <div>This is header</div>
+  </template>
+
+  <template slot="main">
+    <div class="view-main">This is main</div>
+  </template>
+
+  <template slot="footer">
+    <div>This is footer</div>
+  </template>
+
+  <script type="module" src="/example/view/index.ts"></script>
+</view-layout>
+
+<style global>
+  body {
+    background-color: orange;
+  }
+</style>

@@ -1,0 +1,15 @@
+<div view:dynamic="dynamic-css" class="pink">[view:dynamic] dynamic-css</div>
+
+<!-- or -->
+<!-- <div class="$d.dynamic-css">[$d.] dynamic-css</div> -->
+
+<!-- 开发环境中渲染的 -->
+<style dynamic>
+  .dynamic-css {
+    color: {{ $attrs.color }};
+  }
+
+  :global(.pink) {
+    background: pink;
+  }
+</style>

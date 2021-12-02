@@ -1,0 +1,162 @@
+{
+  "version": 1.1,
+  "globalAttributes": [
+    {
+      "name": "view:query",
+      "values": [
+        {
+          "name": "global"
+        },
+        {
+          "name": "parents"
+        },
+        {
+          "name": "parent"
+        }
+      ],
+      "description": "posthtml-view query components"
+    },
+    {
+      "name": "view:module",
+      "values": [],
+      "description": "posthtml-view view:module"
+    },
+    {
+      "name": "view:dynamic",
+      "values": [],
+      "description": "posthtml-view view:dynamic"
+    }
+  ],
+  "tags": [
+    {
+      "name": "slot",
+      "description": "posthtml-view slot",
+      "attributes": [
+        {
+          "name": "name",
+          "description": "posthtml-view slot name"
+        }
+      ]
+    },
+    {
+      "name": "template",
+      "description": "posthtml-view template",
+      "attributes": [
+        {
+          "name": "slot",
+          "description": "posthtml-view template slot name"
+        }
+      ]
+    },
+    {
+      "name": "style",
+      "description": "posthtml-view style",
+      "attributes": [
+        {
+          "name": "module",
+          "description": "posthtml-view style module"
+        },
+        {
+          "name": "dynamic",
+          "description": "posthtml-view style dynamic"
+        },
+        {
+          "name": "dynamic",
+          "description": "posthtml-view style dynamic"
+        },
+        {
+          "name": "global",
+          "description": "posthtml-view style global"
+        },
+        {
+          "name": "to",
+          "description": "posthtml-view style to",
+          "values": [
+            {
+              "name": "*"
+            },
+            {
+              "name": "file"
+            },
+            {
+              "name": "head"
+            }
+          ]
+        },
+        {
+          "name": "index",
+          "description": "posthtml-view style position",
+          "values": [
+            {
+              "name": "prepend"
+            },
+            {
+              "name": "append"
+            }
+          ]
+        },
+        {
+          "name": "lang",
+          "description": "posthtml-view style lang",
+          "values": [
+            {
+              "name": "css"
+            },
+            {
+              "name": "scss"
+            },
+            {
+              "name": "less"
+            },
+            {
+              "name": "sass"
+            },
+            {
+              "name": "styl"
+            },
+            {
+              "name": "stylus"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "view:components",
+      "description": "posthtml-view view:components",
+      "attributes": []
+    },
+    {
+      "name": "view:register",
+      "description": "posthtml-view view:register",
+      "attributes": [
+        {
+          "name": "tag",
+          "description": "component tag",
+          "values": []
+        },
+        {
+          "name": "src",
+          "description": "component src",
+          "values": []
+        }
+      ]
+    },
+    {
+      "name": "view:component",
+      "description": "posthtml-view view:component",
+      "attributes": [
+        {
+          "name": "tag",
+          "description": "component tag",
+          "values": []
+        },
+        {
+          "name": "src",
+          "description": "component src",
+          "values": []
+        }
+      ]
+    }
+  ]
+}
