@@ -13,7 +13,7 @@ PHP applications require PHP installed
 ## Install
 
 ```bash
-npm i -D vite-plugin-posthtml-view
+npm i -D posthtml-view
 ```
 
 ## Major TODOs:
