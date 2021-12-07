@@ -523,10 +523,13 @@ function parseStyleAndScript(
       let global_css = ''
       let to: StyleToSelector | undefined = optionStyled.to
 
+      const start_mark = ':__posthtml_view_to_file_start_mark__{}'
+      const end_mark = ':__posthtml_view_to_file_end_mark__{}'
+
       merges.forEach((item) => {
         // add mark
         if (item.to === 'file' && item.code) {
-          item.code = `:__posthtml_view_to_file_start_mark__{}${item.code}:__posthtml_view_to_file_end_mark__{}`
+          item.code = `${start_mark}${item.code}${end_mark}`
         }
 
         if ('scoped' === item.type) {
@@ -542,7 +545,12 @@ function parseStyleAndScript(
         }
       })
 
-      const ast = postcssScopedParser(scoped_css, component.resolveId, options)
+      const ast = postcssScopedParser(
+        scoped_css,
+        component.resolveId,
+        options,
+        (css) => css.replace(start_mark, '').replace(end_mark, '')
+      )
 
       scoped_css = ast.css
       scopedHash = ast.scopedHash

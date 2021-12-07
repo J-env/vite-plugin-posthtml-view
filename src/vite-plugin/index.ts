@@ -22,7 +22,7 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
     mocksDirectory: 'mocks',
     buildPagesDirectory: 'pages',
     usePlugins: null,
-    cssjanus: false,
+    rtl: false,
     minifyHtml: true
   }, _opts || {})
 

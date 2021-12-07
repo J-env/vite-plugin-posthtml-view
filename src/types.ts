@@ -14,7 +14,7 @@ export interface VitePluginOptions {
   includes: string[]
 
   /**
-   * 忽略某些目录和文件生成页面
+   * Ignore directories and files
    * @default []
    */
   ignore: string[]
@@ -52,7 +52,7 @@ export interface VitePluginOptions {
    * rtl plugin
    * @default false
    */
-  cssjanus: ({
+  rtl: ({
     transformDirInUrl?: boolean
     transformEdgeInUrl?: boolean
   }) | boolean

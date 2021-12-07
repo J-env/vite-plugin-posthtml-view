@@ -40,6 +40,12 @@ export function posthtmlViewBundle(
     }
   }
 
+  const { ...cssjanusoptions } = (
+    typeof options.rtl === 'boolean'
+      ? {}
+      : options.rtl
+  )
+
   const filter = createFilter(['**/*.html'])
 
   // let config: ResolvedConfig
@@ -103,14 +109,14 @@ export function posthtmlViewBundle(
         if (
           bundle.type === 'asset' &&
           bundle.fileName.endsWith('.css') &&
-          options.cssjanus
+          options.rtl
         ) {
           const rtlFileName = bundle.fileName.replace('.css', '.rtl.css')
 
           const rtlCss = cssjanus.transform(bundle.source, {
             transformDirInUrl: false,
             transformEdgeInUrl: false,
-            ...(options.cssjanus as {})
+            ...cssjanusoptions
           })
 
           this.emitFile({

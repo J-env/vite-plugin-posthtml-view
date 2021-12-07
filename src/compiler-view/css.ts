@@ -16,13 +16,25 @@ export interface ScopedClasses {
   tags: Record<string, boolean>
 }
 
-export function postcssScopedParser(css: string, resolveId: string, options: OptionsUtils) {
+function hashCleanHandle(css: string): string {
+  return css
+}
+
+export function postcssScopedParser(
+  css: string,
+  resolveId: string,
+  options: OptionsUtils,
+  _hashCleanHandle?: (css: string) => string
+) {
+  _hashCleanHandle = _hashCleanHandle || hashCleanHandle
+
   const isProd = options.mode === 'production'
-  const hash = slugify(`scoped-${resolveId}:` + (isProd ? css : ''))
+  const hash = slugify(`scoped-${resolveId}:` + (isProd ? _hashCleanHandle(css || '') : ''))
 
   const scopedHash = toValidCSSIdentifier((options.styled.prefix || '') + hash)
 
   const ast = postcssSafeParser(css)
+
   const scopedClasses: ScopedClasses = {
     classNames: [],
     tags: {}
