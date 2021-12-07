@@ -1,27 +1,28 @@
-<layout-base>
-  <div>
-    php render
-    <?= $hello ?>
-  </div>
+<layout-base title="home">
+  <!--
+  <layout-base></layout-base> => @see: /example/_layout/global-components.html
+  <my-button></my-button> => @see: /example/_layout/global-components.html
+ -->
 
-  <div>
-    <my-button>button 1</my-button>
-  </div>
+  <div>home page</div>
+
+  <my-button>button click</my-button>
+
+  <hr>
 
   <view:component src="./_demo/register-components.html">
     <template slot="bottom">
-      <div>this is bottom slot</div>
+      <div>this is bottom</div>
     </template>
 
-    <div>this is defult slot</div>
+    <div>this is default</div>
   </view:component>
 
   <script type="module" src="/example/index.ts"></script>
-
 </layout-base>
 
-<style global>
-  body {
+<style>
+  :global(body) {
     padding-bottom: 100px;
   }
 </style>

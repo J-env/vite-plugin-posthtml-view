@@ -2,14 +2,14 @@ import { createCipheriv, createDecipheriv } from 'crypto'
 
 const aesKey = '0123456789abcdef'
 const markMap = {
-  '=': ':',
-  'php': '#',
-  ':': '=',
-  '#': 'php'
+  '=': '\\:',
+  'php': '\\#',
+  '\\:': '=',
+  '\\#': 'php'
 }
 
 export function htmlConversion(html: string) {
-  return html.replace(/{%(:|#)(.*?)%}/gs, function (_match, p1, p2) {
+  return html.replace(/\\{\\%(\\:|\\#)(.*?)\\%\\}/gs, function (_match, p1, p2) {
     const p = markMap[p1] || p1
     return `<?${p}${p2}?>`
   })
@@ -26,7 +26,7 @@ export function encryptHtml(html: string) {
   return html.replace(/<\?(=|php)(.*?)\?>/gs, function (_match, p1, p2) {
     const p = markMap[p1] || p1
     // <?= $hello ?> to {%:加密的字符串%}
-    return `{%${p}${aesEncrypt(p2, aesKey)}%}`
+    return `\\{\\%${p}${aesEncrypt(p2, aesKey)}\\%\\}`
   })
 }
 
@@ -36,9 +36,9 @@ export function encryptHtml(html: string) {
  */
 export function decryptHtml(html: string) {
   return html
-    .replace(/(%})=""/g, '$1')
-    .replace(/{%(:|#)(.*?)%}/gs, function (_match, p1, p2) {
-      return `{%${p1}${aesDecrypt(p2, aesKey)}%}`
+    .replace(/(\\%\\})=""/g, '$1')
+    .replace(/\\{\\%(\\:|\\#)(.*?)\\%\\}/gs, function (_match, p1, p2) {
+      return `\\{\\%${p1}${aesDecrypt(p2, aesKey)}\\%\\}`
     })
 }
 

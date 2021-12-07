@@ -1,42 +1,22 @@
 import posthtml, { Node as Tree, RawNode, Plugin } from 'posthtml'
-import { merge } from 'lodash'
-import { render } from 'posthtml-render'
 import expressions from 'posthtml-expressions'
 import match from 'posthtml-match-helper'
+import { render } from 'posthtml-render'
+import { merge } from 'lodash'
+import fse from 'fs-extra'
 
-import { ViewComponent } from './view'
-import { Options, ProcessOptions } from '../types'
+import type { ProcessOptions, ComponentMeta } from '../types'
+import type { OptionsUtils } from './utils'
 
-/**
- * @desc 对读取的组件文件 html 内容进行
- * attrs 传入
- * @param componentNode 匹配的组件标签及后代节点内容
- * @param options
- * @returns
- */
-export function parseContent(componentNode: RawNode, view: ViewComponent, options: Options) {
-  // content (组件文件 html 内容)
-  return function (content: string) {
-    return processWithPostHtml(
-      options.parser,
-      options.plugins,
-      content,
-      [
-        parseAttrsToLocals(view.locals, componentNode.attrs, options.$attrs)
-      ]
-    )
-  }
-}
+type Components = OptionsUtils['components']
 
-export function parseTemplate(componentNode: RawNode, view: ViewComponent, options: Options) {
-  // tree (组件文件 html 内容解析后的节点树)
+export function parseTemplate(node: RawNode, component: ComponentMeta, options: OptionsUtils) {
   return function (tree: Tree) {
-    // 匹配 component slot 插槽内容
-    const componentContent = componentNode.content || []
+    const componentContent = node.content || []
     const slotNodes: Record<string, RawNode> = {}
 
-    // wrapper 在使用组件的地方查找具名插槽
     if (componentContent.length) {
+      // name slot
       tree.match.call(componentContent, match('template'), (node) => {
         if (!node.attrs) return node
         if (!node.attrs.slot) return node
@@ -47,31 +27,32 @@ export function parseTemplate(componentNode: RawNode, view: ViewComponent, optio
       })
     }
 
-    // 匹配 slot插槽节点
     const _content = tree.match(match('slot'), (slot) => {
       const name = slot.attrs && slot.attrs.name || ''
 
-      // 默认插槽
+      // default slot
       if (!name) {
         return mergeContent(slot.content, componentContent.filter(node => {
           return !(node['tag'] === 'template' && node['attrs'] && node['attrs']['slot'])
         }))
       }
 
-      // 具名插槽
+      // name slot
       const slotNode = slotNodes[name]
 
       if (slotNode) {
         return mergeContent(slot.content, slotNode.content, getTemplateType(slotNode))
       }
 
-      // 默认内容
+      // default
       return slot.content || []
     })
 
     // @ts-ignore
-    componentNode.tag = false
-    componentNode.content = _content
+    node.tag = false
+    node.content = _content
+
+    return tree
   }
 }
 
@@ -125,16 +106,20 @@ export function processWithPostHtml(
     .then(result => result.tree)
 }
 
-export function parseAttrsToLocals(locals: Record<string, any>, attrs: RawNode['attrs'], attrKey: string) {
+export function parseAttrsToLocals(
+  locals: Record<string, any>,
+  attrs: RawNode['attrs'],
+  options: OptionsUtils
+) {
   const $attrs = {}
 
   Object.entries(attrs || {}).forEach(([key, value]) => {
-    // 转换成 js value
+    // to js value
     $attrs[key] = transformValue(value)
   })
 
   const _locals = {
-    [attrKey]: merge(locals, $attrs)
+    [options.$attrs]: merge({}, options.locals, locals, $attrs)
   }
 
   return expressions({ locals: _locals })
@@ -147,4 +132,61 @@ export function transformValue(value: void | string) {
   } catch (err) {
     return value
   }
+}
+
+let cacheComponents: Components
+
+export async function parseGlobalComponents({
+  registerComponentsFile,
+  root,
+  mode,
+  encoding,
+  prefix,
+  join,
+  slash
+}: OptionsUtils): Promise<Components> {
+  if (cacheComponents) return cacheComponents
+
+  if (!registerComponentsFile) return {}
+
+  const components: Components = {}
+  const file = join(root, registerComponentsFile)
+
+  const html = await fse.readFile(file, encoding)
+
+  function matchComponents(tree: Tree) {
+    tree.match(match(prefix('components')), (node) => {
+      if (node.content) {
+        node.content.forEach((element) => {
+          if (typeof element === 'string') return
+
+          let { src, ...locals } = element.attrs || {}
+
+          if (element.tag && src) {
+            src = join(file, src)
+
+            components[element.tag] = {
+              tag: element.tag,
+              src: src,
+              resolveId: slash(src),
+              locals
+            }
+          }
+        })
+      }
+
+      return node
+    })
+  }
+
+  await posthtml([])
+    .use(matchComponents)
+    .process(html, {})
+
+  // Production environments require caching
+  if (mode !== 'development') {
+    cacheComponents = components
+  }
+
+  return components
 }

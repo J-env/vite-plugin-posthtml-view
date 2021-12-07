@@ -1,3 +1,20 @@
-<my-button>my-button view-query</my-button>
+<view:components>
+  <!--
+    @tag-name: my-button
+    @src: relative path
+  -->
 
-<my-button view:query="parent">my-button parent</my-button>
+  <my-button src="./my-button.html"></my-button>
+</view:components>
+
+<div>
+  <my-button class="component-btn">this is component button</my-button>
+
+  <my-button view:query="global">this is global button</my-button>
+</div>
+
+<style>
+  .component-btn {
+    font-size: 30px;
+  }
+</style>

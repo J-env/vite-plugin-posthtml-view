@@ -20,25 +20,24 @@ export interface VitePluginOptions {
   ignore: string[]
 
   /**
-   * 开发环境 页面目录
+   * Development environment pages directory
    * @default 'pages'
    */
   pagesDirectory: 'pages' | StringType
 
   /**
-   * 开发环境 页面目录
+   * Development environment mocks directory
    * @default 'mocks'
    */
   mocksDirectory: 'mocks' | StringType
 
   /**
-   * 构建后的 html 页面目录
    * @default 'pages'
    */
-  distPagesDirectory: 'pages' | StringType
+  buildPagesDirectory: 'pages' | StringType
 
   /**
-   * @default {}
+   * @default null
    */
   php?: {
     rename?: boolean
@@ -49,11 +48,14 @@ export interface VitePluginOptions {
     }) => Promise<string>
   }
 
-  cssjanus: {
-    transformDirInUrl: boolean
-
-    transformEdgeInUrl: boolean
-  }
+  /**
+   * rtl plugin
+   * @default false
+   */
+  cssjanus: ({
+    transformDirInUrl?: boolean
+    transformEdgeInUrl?: boolean
+  }) | boolean
 
   minifyHtml: MinifyOptions | boolean
 
@@ -67,7 +69,6 @@ export interface VitePluginOptions {
 // PostHTML View
 export interface Options {
   /**
-   * 项目根目录
    * @default process.cwd()
    */
   root: string
@@ -77,13 +78,14 @@ export interface Options {
    */
   mode: 'development' | 'production' | StringType
 
+  htmlProcessor: ((html: string) => string) | null
+
   /**
    * @default 'utf8'
    */
   encoding: BufferEncoding
 
   /**
-   * 缓存目录
    * @default '.posthtml-view-cache'
    */
   cacheDirectory: '.posthtml-view-cache' | StringType
@@ -95,10 +97,16 @@ export interface Options {
   viewPrefix: 'view:' | StringType
 
   /**
-   * 当前渲染的页面路径
+   * page file path
    * @require
    */
   from: string
+
+  /**
+   * registered components file
+   * @default null
+   */
+  registerComponentsFile: string | null
 
   /**
    * css scss less ...
@@ -106,26 +114,17 @@ export interface Options {
   stylePreprocessor: StylePreprocessor
 
   /**
-   * 注册全局组件
-   * global registered components
-   * @default {}
-   */
-  components: Components
-
-  /**
-   * 样式处理 全局配置
    * global default config
    * <style></style>
    */
   styled: Partial<StyledOptions>
 
   js: {
+    type?: 'js' | 'ts'
     extract?: ExtractHandle
   }
 
   // assets: {}
-
-  devCssDiv: string | null
 
   parser: ProcessOptions
 
@@ -134,7 +133,6 @@ export interface Options {
   plugins: any[]
 
   /**
-   * 全局变量
    * @default {}
    */
   locals: Record<string, any>
@@ -155,10 +153,10 @@ export interface ProcessOptions extends PostHtmlOptions {
 export type ExtractHandle = (props: ExtractHandleProps) => void
 
 interface ExtractHandleProps {
-  type: 'js' | 'ts' | 'css'
+  type: 'js' | 'ts' | 'css' | StringType
   from: string
-  componentName: string
-  main: string
+  resolveId: string
+  scopedHash: string
   src?: string
   source?: string
 }
@@ -168,81 +166,49 @@ interface ExtractHandleProps {
 // ============ styles ==========================
 export interface StyledOptions {
   /**
-   * module <style module></style>
    * scoped <style scoped></style>
    * global <style global></style>
    *
-   * components
-   * dynamic <style dynamic></style>
-   * ssr <style ssr></style>
-   * @default 'module'
+   * @default 'scoped'
    */
-  type: StyleType | String
+  type: StyleType | StringType
 
-  /**
-   * @default 'css'
-   */
-  lang: CssLang
 
-  rtl: boolean
+  prefix: 'view-' | StringType
 
   /**
    * @default 'head'
    */
   to: StyleToSelector
 
-  removeDataStyledAttr: boolean
-
-  /**
-   * <div x-transition:enter="$m.class-name"></div>
-   * <style>.class-name{}</style>
-   * @example ['x-transition:enter', 'x-transition:leave']
-   * @default []
-   */
-  customAttributes: string[]
-
   extract?: ExtractHandle
 
   /**
-   *
-   * @default false production
-   * @default true development
-   */
-  displayName: boolean
-
-  /**
-   * 自定义生成类名
-   * 默认内部生成简短类名 generateName()
+   * Custom generated class name
    * @default null
    */
   classNameSlug: ClassNameSlugFn | null
 }
 
-export type CssLang = 'css' | 'scss' | 'less' | 'sass' | 'styl' | 'stylus'
-
-export type StylePreprocessor = (
-  source: string,
-  lang: CssLang
-) => StylePreprocessorResults | Promise<StylePreprocessorResults>
+export type StylePreprocessor = (source: string) =>
+  StylePreprocessorResults | Promise<StylePreprocessorResults>
 
 export interface StylePreprocessorResults {
   code: string
 }
 
-export type StyleToSelector = '*' | 'file' | 'head' | StringType
+export type StyleToSelector = '*' | 'file' | 'head'
 
-export type StyleType = 'module' | 'scoped' | 'global'
-
-export type StyleTypeAll = StyleType | 'dynamic'
+export type StyleType = 'scoped' | 'global'
 
 export type StringType = (string & {})
 
 export type ClassNameSlugType = string
 
 export type ClassNameSlugFn = (
-  hash: string,
-  title: string,
-  type: StyleTypeAll
+  slug: string,
+  className: string,
+  type: StyleType
 ) => string
 
 // ==========================================================================
@@ -263,10 +229,16 @@ export interface ComponentMeta {
   src: string
 
   /**
-   * 组件局部默认变量
+   * parsed file path
+   * Component unique identifier
+   */
+  resolveId: string
+
+  /**
+   * component default locals
    * @default {}
    */
-  locals?: Record<string, any>
+  locals: Record<string, any>
 
   /**
    * Component's HTML code

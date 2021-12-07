@@ -2,8 +2,6 @@ import path from 'path'
 import fse from 'fs-extra'
 import shell from 'shelljs'
 
-import { getContentHash } from '../utils'
-
 export async function requireMock(tspath: string, hot: boolean = true) {
   let mock: null | Record<string, any> = null
 
@@ -53,10 +51,8 @@ export async function writeTemplate(
 ) {
   const filename = path.join(cacheDirectory, '.php-dev', file)
 
-  const hash = getContentHash(html)
-
-  if (hashCache.get(file) !== hash) {
-    hashCache.set(file, hash)
+  if (hashCache.get(file) !== html) {
+    hashCache.set(file, html)
 
     await fse.outputFile(path.resolve(root, filename), html, 'utf8')
   }

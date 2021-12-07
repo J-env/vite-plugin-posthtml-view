@@ -1,10 +1,6 @@
 <!-- register components -->
 <view:components>
-  <view:register tag="dynamic-css" src="./dynamic-css.html"></view:register>
-  <view:register tag="global-css" src="./global-css.html"></view:register>
-  <view:register tag="module-css" src="./module-css.html"></view:register>
-  <view:register tag="scoped-css" src="./scoped-css.html"></view:register>
-  <view:register tag="my-button" src="./my-button.html"></view:register>
+  <global-css src="./global-css.html"></global-css>
 </view:components>
 
 <div class="default-slot">
@@ -12,53 +8,28 @@
 </div>
 
 <!-- use register components -->
-<div>
-  <dynamic-css></dynamic-css>
 
-  <br>
-  <hr>
-  <br>
+<ul>
+  <li>
+    <global-css></global-css>
+  </li>
 
-  <global-css></global-css>
+  <li>
+    <view:component src="./view-js.html"></view:component>
+  </li>
 
-  <br>
-  <hr>
-  <br>
+  <li>
+    <view:component src="./view-query.html"></view:component>
+  </li>
 
-  <scoped-css></scoped-css>
-
-  <br>
-  <hr>
-  <br>
-
-  <my-button>my-button</my-button>
-
-  <my-button view:query="global">
-    <span>my-button global</span>
-  </my-button>
-
-  <br>
-  <hr>
-  <br>
-
-  <view:component src="./view-js.html"></view:component>
-
-  <br>
-  <hr>
-  <br>
-</div>
+  <li>
+    <view:component src="./use-file/index.html"></view:component>
+  </li>
+</ul>
 
 <div class="bottom-slot">
   <slot name="bottom"></slot>
 </div>
-
-<br>
-<hr>
-<br>
-
-<view:component src="./view-query.html"></view:component>
-
-<view:component src="./use-file/index.html"></view:component>
 
 <style scoped>
   .default-slot {

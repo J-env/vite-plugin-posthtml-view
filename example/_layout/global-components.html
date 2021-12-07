@@ -1,0 +1,38 @@
+<!-- register components -->
+
+<view:components>
+  <!--
+    @example:
+    <component-tag-name src="component-file-path" {...defaultAttrs}></component-tag-name>
+  -->
+
+  <!--
+    @tag-name: layout-base
+    @src: relative path
+    @title: default title
+  -->
+  <layout-base src="./base.html" title="layout base"></layout-base>
+
+
+  <!--
+    @tag-name: my-button
+    @src: absolute path (project root)
+  -->
+  <my-button src="/example/components/button.html"></my-button>
+
+</view:components>
+
+
+
+
+
+<!--
+  @use: index.html
+-->
+<!--
+<layout-base title="home">
+  <div>home page</div>
+
+  <my-button>button click</my-button>
+</layout-base>
+-->

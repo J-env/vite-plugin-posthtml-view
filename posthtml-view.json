@@ -6,25 +6,9 @@
       "values": [
         {
           "name": "global"
-        },
-        {
-          "name": "parents"
-        },
-        {
-          "name": "parent"
         }
       ],
       "description": "posthtml-view query components"
-    },
-    {
-      "name": "view:module",
-      "values": [],
-      "description": "posthtml-view view:module"
-    },
-    {
-      "name": "view:dynamic",
-      "values": [],
-      "description": "posthtml-view view:dynamic"
     }
   ],
   "tags": [
@@ -53,20 +37,16 @@
       "description": "posthtml-view style",
       "attributes": [
         {
-          "name": "module",
-          "description": "posthtml-view style module"
-        },
-        {
-          "name": "dynamic",
-          "description": "posthtml-view style dynamic"
-        },
-        {
-          "name": "dynamic",
-          "description": "posthtml-view style dynamic"
-        },
-        {
           "name": "global",
           "description": "posthtml-view style global"
+        },
+        {
+          "name": "scoped",
+          "description": "posthtml-view style scoped"
+        },
+        {
+          "name": "dynamic",
+          "description": "posthtml-view style dynamic"
         },
         {
           "name": "to",
@@ -82,42 +62,6 @@
               "name": "head"
             }
           ]
-        },
-        {
-          "name": "index",
-          "description": "posthtml-view style position",
-          "values": [
-            {
-              "name": "prepend"
-            },
-            {
-              "name": "append"
-            }
-          ]
-        },
-        {
-          "name": "lang",
-          "description": "posthtml-view style lang",
-          "values": [
-            {
-              "name": "css"
-            },
-            {
-              "name": "scss"
-            },
-            {
-              "name": "less"
-            },
-            {
-              "name": "sass"
-            },
-            {
-              "name": "styl"
-            },
-            {
-              "name": "stylus"
-            }
-          ]
         }
       ]
     },
@@ -127,30 +71,9 @@
       "attributes": []
     },
     {
-      "name": "view:register",
-      "description": "posthtml-view view:register",
-      "attributes": [
-        {
-          "name": "tag",
-          "description": "component tag",
-          "values": []
-        },
-        {
-          "name": "src",
-          "description": "component src",
-          "values": []
-        }
-      ]
-    },
-    {
       "name": "view:component",
       "description": "posthtml-view view:component",
       "attributes": [
-        {
-          "name": "tag",
-          "description": "component tag",
-          "values": []
-        },
         {
           "name": "src",
           "description": "component src",

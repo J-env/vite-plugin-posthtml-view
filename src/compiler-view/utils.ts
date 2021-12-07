@@ -1,3 +1,32 @@
+import type { Options, Components } from '../types'
+
+/**
+ * @private
+ */
+export type OptionsUtils = Options & {
+  /**
+   * @private
+   */
+  join(from: string, src: string): string
+
+  /**
+   * ensure the path is normalized in a way that is consistent inside
+   * project (relative to root) and on different systems.
+   * @private
+   */
+  slash(src: string): string
+
+  /**
+   * @private
+   */
+  prefix(str: string): string
+
+  /**
+   * @private
+   */
+  components: Components
+}
+
 const hyphenateReg = /\B([A-Z])/g
 
 export function hyphenate(str: string) {

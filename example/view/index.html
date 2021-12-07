@@ -1,18 +1,38 @@
 <view:components>
-  <view:register tag="view-layout" src="./_layout.html"></view:register>
+  <view-layout src="./_layout.html" title="default title"></view-layout>
+
+  <style-js src="./components/style-js/index.html"></style-js>
 </view:components>
 
-<view-layout title="view:layout">
+<view-layout title="view-layout">
   <template slot="header">
     <div>This is header</div>
   </template>
 
   <template slot="main">
     <div class="view-main">This is main</div>
+
+    <br>
+    <br>
+    <br>
+    <hr>
+    <br>
+    <br>
+    <br>
+
+    <style-js></style-js>
+
+    <br>
+    <br>
+    <br>
+    <hr>
+    <br>
+    <br>
+    <br>
   </template>
 
   <template slot="footer">
-    <div>This is footer</div>
+    <div>This is footer 111</div>
   </template>
 
   <script type="module" src="/example/view/index.ts"></script>
@@ -21,5 +41,13 @@
 <style global>
   body {
     background-color: orange;
+  }
+</style>
+
+<style>
+  .view-main {
+    color: #000;
+    font-size: 40px;
+    font-weight: bold;
   }
 </style>

@@ -56,20 +56,6 @@ export function getHistoryReWriteRuleList(options: Options): Rewrite[] {
   return list
 }
 
-export function getEntryIndexHtmlName(filename: string, pagesDir: string): string {
-  let file = filename.replace(pagesDir, '')
-
-  if (file[0] === '/') {
-    file = file.slice(1)
-  }
-
-  if (!file.endsWith('.html')) {
-    file = file + '.html'
-  }
-
-  return file
-}
-
 function getInputPages(root: string, options: Options) {
   const pages = getPagesOptions(options)
   const input: Record<string, string> = {}

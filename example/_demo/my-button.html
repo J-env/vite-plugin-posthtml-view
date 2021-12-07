@@ -1,8 +1,8 @@
-<button class="$m.button" type="button">
+<button class="button {{$attrs['class'] || ''}}" type="button">
   <slot></slot>
 </button>
 
-<style module>
+<style>
   .button {
     padding: 12px 24px;
     color: #fff;

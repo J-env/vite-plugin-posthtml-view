@@ -1,6 +1,6 @@
 {
   "name": "posthtml-view",
-  "version": "0.0.2-alpha.0",
+  "version": "0.0.3-alpha.0",
   "description": "",
   "keywords": [
     "vite",
@@ -56,8 +56,7 @@
     "posthtml-match-helper": "^1.0.1",
     "posthtml-parser": "^0.10.1",
     "posthtml-render": "^3.0.0",
-    "shelljs": "^0.8.4",
-    "slash": "^4.0.0"
+    "shelljs": "^0.8.4"
   },
   "devDependencies": {
     "@types/sass": "^1.43.0",

@@ -76,8 +76,8 @@ export default defineConfig(async (env) => {
 
   return {
     server: {
-      open: '/view/index.html',
-      port: 3001
+      open: '/index.html',
+      port: 3001,
     },
     resolve: {
       alias: {
@@ -92,37 +92,24 @@ export default defineConfig(async (env) => {
         includes: [],
         ignore: ['components'],
         pagesDirectory: 'example',
-        distPagesDirectory: 'pages',
-        components: {
-          'layout-base': {
-            tag: 'layout-base',
-            src: '/example/_layout/base.html'
-          },
-          'my-button': {
-            tag: 'my-button',
-            src: '/example/components/button.html'
-          }
-        },
+        buildPagesDirectory: 'pages',
+        registerComponentsFile: '/example/_layout/global-components.html',
         // minifyHtml: false,
-        styled: {
-          lang: 'scss'
+        php: {
+          rename: false
         },
-        stylePreprocessor: async (css, lang) => {
-          if (lang === 'scss') {
-            const output = scss.renderSync({
-              data: preprocessorOptions.scss.additionalData + '\n' + css,
-              includePaths: ['node_modules'],
-              outputStyle: 'compressed',
-              // importer: [],
-            })
-
-            return {
-              code: output.css.toString()
-            }
-          }
+        styled: {},
+        js: {},
+        stylePreprocessor: async (css) => {
+          const output = scss.renderSync({
+            data: preprocessorOptions.scss.additionalData + '\n' + css,
+            includePaths: ['node_modules'],
+            outputStyle: 'compressed',
+            // importer: [],
+          })
 
           return {
-            code: css
+            code: output.css.toString()
           }
         }
       })
