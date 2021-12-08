@@ -133,6 +133,8 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
   const headStyleId = ''
   const attrIdKey = '__posthtml_view_css__'
 
+  let mainjs = ''
+
   const promises: Promise<void | Result>[] = []
 
   if (isDev) {
@@ -157,6 +159,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 
   const extractCache = new Map<ResolveId, CssCache>()
   const extractList: ResolveId[] = []
+  const hasExtract = typeof styled.extract === 'function'
 
   tree.match(match('style'), function (node) {
     const css = toString(node.content)
@@ -165,9 +168,14 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 
     const scopedHash = node.attrs['data-scoped-hash'] || ''
     const resolveId = node.attrs['data-resolve-id'] || ''
-    const to = isDev ? `#${attrIdKey}` : (node.attrs['data-to'] || styled.to || 'head')
 
-    if (node.attrs['data-to'] === 'file' || to === 'file') {
+    let to = node.attrs['data-to'] || styled.to || 'head'
+
+    if (isDev && to !== '*') {
+      to = `#${attrIdKey}`
+    }
+
+    if ((node.attrs['data-to'] === 'file' || to === 'file') && hasExtract) {
       if (css && !extractCache.has(resolveId)) {
         extractCache.set(resolveId, {} as any)
 
@@ -243,6 +251,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
         resolveId,
         scopedHash,
         source: content,
+        mainjs: mainjs || getMainJs(),
         src: src.replace(`.${ext}`, '')
       })
     }
@@ -253,12 +262,48 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     return node
   })
 
+  function getMainJs() {
+    if (mainjs) return mainjs
+
+    let src
+
+    // has module
+    tree.match(match('script[type="module"]'), (script) => {
+      if (!src && script.attrs && script.attrs.src) {
+        script.attrs.src = script.attrs.src + '?__posthtml_view__=0'
+        src = script.attrs.src
+      }
+
+      return script
+    })
+
+    if (!src && Array.isArray(tree)) {
+      src = options.slash(from, true).replace('.html', '.' + jsExt) + '?__posthtml_view__=1'
+
+      tree.push({
+        tag: 'script',
+        attrs: {
+          type: 'module',
+          src
+        }
+      })
+    }
+
+    mainjs = src
+
+    return src
+  }
+
   const invalidSelector = new Set<string>()
+
+  // postcss
+  getPostcssConfigSync()
 
   extractList.forEach((resolveId) => {
     const css = extractCache.get(resolveId)
 
     if (!css) return
+    if (!css.css) return
 
     if (isDev) {
       css.to = `#${attrIdKey}` as any
@@ -291,14 +336,20 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
       return
     }
 
-    if (typeof styled.extract === 'function') {
-      styled.extract({
-        type: 'css',
-        from,
-        resolveId: css.resolveId,
-        scopedHash: css.scopedHash,
-        source: css.css
-      })
+    if (hasExtract) {
+      promises.push(
+        processor.process(css.css, { ...postcssrc_sync.options, from: from || undefined })
+          .then(result => {
+            styled.extract && styled.extract({
+              type: 'css',
+              from,
+              mainjs: mainjs || getMainJs(),
+              resolveId: css.resolveId,
+              scopedHash: css.scopedHash,
+              source: result.css
+            })
+          })
+      )
     }
   })
 
@@ -387,9 +438,6 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     return node
   })
 
-  // postcss
-  getPostcssConfigSync()
-
   tree.match(match('style'), (style) => {
     const css = toString(style.content)
 
@@ -446,7 +494,9 @@ function parseStyleAndScript(
 
   const {
     stylePreprocessor,
-    styled: optionStyled
+    styled: optionStyled,
+    noflip,
+    cssjanus
   } = options
 
   const cssPreprocessor = (css: string) => {
@@ -487,6 +537,8 @@ function parseStyleAndScript(
             .then((css) => {
               if (!css) return { code: '' }
 
+              css = noflip(css)
+
               return cssPreprocessor(css)
             })
             .then((result) => {
@@ -494,7 +546,7 @@ function parseStyleAndScript(
 
               return {
                 ...result,
-                code: resultCss || '',
+                code: cssjanus(resultCss || ''),
                 to: (dynamic && styled.to === 'file') ? 'head' : styled.to,
                 type: styled.type
               }
@@ -600,6 +652,7 @@ function parseStyleAndScript(
         global_css = ''
 
         style.attrs = style.attrs || {}
+
         style.attrs['data-to'] = to
         style.attrs['data-scoped-hash'] = scopedHash
         style.attrs['data-resolve-id'] = component.resolveId
@@ -607,6 +660,8 @@ function parseStyleAndScript(
         delete style.attrs['scoped']
         delete style.attrs['global']
         delete style.attrs['src']
+        delete style.attrs['to']
+        delete style.attrs['dynamic']
 
         return style
       })
@@ -632,18 +687,29 @@ function parseStyleAndScript(
 
       let src = node.attrs.src
 
-      if (
-        (src && /^(https?:)?\/\//.test(src)) ||
-        node.attrs.type ||
-        ['null', 'false'].includes(jsPrefix)
-      ) {
+      if (src && /^(https?:)?\/\//.test(src)) {
+        return node
+      }
+
+      if (node.attrs[jsPrefix] === 'null' || node.attrs[jsPrefix] === 'false') {
         delete node.attrs[jsPrefix]
         return node
       }
 
+      if (src && node.attrs.type && node.attrs.type === 'module') {
+        node.attrs.src = options.join(component.src, src)
+        node.attrs.src = options.slash(node.attrs.src, true)
+        return node
+      }
+
+      if (node.attrs.type && node.attrs[jsPrefix] == null) {
+        return node
+      }
+
+      // view:js
       if (src) {
         src = options.join(component.src, src)
-        node.attrs.src = options.slash(src)
+        node.attrs.src = options.slash(src, true)
       }
 
       node.attrs['data-to'] = node.attrs.to
@@ -680,7 +746,7 @@ function parseStyleAndScript(
             from: component.src || undefined
           })
             .then(result => {
-              node.attrs && (node.attrs.style = result.css)
+              node.attrs && (node.attrs.style = cssjanus(result.css))
             })
         )
       }

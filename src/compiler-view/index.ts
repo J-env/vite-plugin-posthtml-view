@@ -1,9 +1,9 @@
-import path from 'path'
 import type { Node as Tree } from 'posthtml'
 
 import type { Options } from '../types'
 
-import { slash } from '../utils/slash'
+import { joinPath, slashPath } from '../utils/slash'
+import { cssjanus, noflipToPlaceholder } from '../utils/rtl'
 import { OptionsUtils } from './utils'
 import { processWithPostHtml, parseGlobalComponents } from './parser'
 import { parse } from './view'
@@ -42,24 +42,52 @@ export function compilerViewPlugin(_options: Partial<Options>) {
     options.getOptions(options)
   }
 
-  // private utils
-  options.join = (from, src) => {
-    return path.join(
-      path.isAbsolute(src) ? options.root : path.dirname(from || options.from),
-      src
-    )
-  }
+  /**
+   * @private
+   */
+  options.join = (from, src) => joinPath(options.root, options.from, from, src)
 
   /**
    * ensure the path is normalized in a way that is consistent inside
    * project (relative to root) and on different systems.
    * @private
    */
-  options.slash = (src) => {
-    return slash(path.normalize(path.relative(options.root, src)))
+  options.slash = (src, sl) => slashPath(options.root, src, sl)
+
+  /**
+   * @private
+   */
+  options.prefix = (str) => `${options.viewPrefix}${str}`
+
+  /**
+  * @private
+  */
+  options.rtl = options.rtl || false
+
+  /**
+   * @private
+   */
+  options.cssjanus = (css) => {
+    if (options.rtl && options.mode === 'development') {
+      return cssjanus(css, {
+        transformEdgeInUrl: options.rtl.transformEdgeInUrl,
+        transformDirInUrl: options.rtl.transformDirInUrl
+      })
+    }
+
+    return css
   }
 
-  options.prefix = (str) => `${options.viewPrefix}${str}`
+  /**
+   * @private
+   */
+  options.noflip = (css) => {
+    if (options.rtl) {
+      return noflipToPlaceholder(css)
+    }
+
+    return css
+  }
 
   // options.components = {}
 

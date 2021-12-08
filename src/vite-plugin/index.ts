@@ -1,13 +1,12 @@
-import path from 'path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import history from 'connect-history-api-fallback'
 import { merge } from 'lodash'
 
 import type { VitePluginOptions, PluginOptions } from '../types'
-import { getConfig, getHistoryReWriteRuleList } from './utils'
-import { slash } from '../utils/slash'
-import { transformHandle } from './transform'
-import { posthtmlViewBundle } from './generate-bundle'
+import { getConfig, getHistoryReWriteRuleList, isCssRequest } from './utils'
+import { noflipToPlaceholder, cssjanus } from '../utils/rtl'
+import { transformHandle, getMainjs } from './transform'
+import { posthtmlViewBundle, getRtlOptions } from './generate-bundle'
 
 /**
  * vite-plugin-posthtml-view
@@ -38,12 +37,12 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
   const chunkCache: Map<string, string> = new Map()
   const virtualId = 'virtual:posthtml-view'
 
+  const rtl = getRtlOptions(options)
+
   const posthtmlViewPages: () => Plugin = () => {
     const name = 'view:posthtml-view-pages'
 
     let config: ResolvedConfig
-
-    let pageId = ''
 
     return {
       name: name,
@@ -60,8 +59,103 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
         options.mode = config.command === 'build' ? 'production' : 'development'
       },
 
-      configureServer(_server) {
-        _server.middlewares.use(
+      transformIndexHtml: {
+        enforce: 'pre',
+        async transform(html, ctx) {
+          if (config.command === 'serve') {
+            if (rtl && typeof rtl.devPreview === 'function' && rtl.devPreview(ctx.originalUrl)) {
+              options.rtl = rtl
+            }
+
+          } else {
+            options.rtl = rtl
+          }
+
+          return await transformHandle(
+            config,
+            options,
+            virtualId,
+            pageCache,
+            chunkCache
+          )(html, ctx)
+        }
+      },
+
+      async resolveId(id, importer) {
+        if (id === virtualId) {
+          return id
+        }
+
+        if (/\?__posthtml_view__=(0|1)/g.test(id)) {
+          return id
+        }
+
+        if (id.startsWith(virtualId)) {
+          return id
+        }
+
+        return null
+      },
+
+      async load(id) {
+        if (id === virtualId) {
+          return ''
+        }
+
+        if (/\?__posthtml_view__=(0|1)/g.test(id)) {
+          const mainid = getMainjs(id)
+          const injectMain = id.includes('__posthtml_view__=1')
+
+          let code = ''
+
+          if (!injectMain) {
+            // add module js
+            code = code + `import '${mainid.replace(/\.(t|j)s/g, '')}';`
+          }
+
+          code = code + (pageCache.get(mainid) || '')
+
+          return code
+        }
+
+        if (id.startsWith(virtualId)) {
+          return chunkCache.get(id) || ''
+        }
+
+        return null
+      },
+
+      async transform(code, id) {
+        if (config.command === 'build' && rtl && isCssRequest(id)) {
+          // @see posthtmlViewBundle()
+          return noflipToPlaceholder(code)
+        }
+
+        return null
+      },
+    }
+  }
+
+  const posthtmlViewDev: () => Plugin = () => {
+    // function mapChunk(cache: Map<string, string>) {
+    //   var arr: string[] = []
+
+    //   cache.forEach((value, key) => {
+    //     arr.push(key)
+    //   })
+
+    //   return arr
+    // }
+
+    return {
+      name: 'view:posthtml-view-dev',
+      enforce: 'pre',
+      apply: 'serve',
+
+      configureServer(server) {
+        const middlewares = server.middlewares
+
+        middlewares.use(
           // @see https://github.com/vitejs/vite/blob/8733a83d291677b9aff9d7d78797ebb44196596e/packages/vite/src/node/server/index.ts#L433
           // @ts-ignore
           history({
@@ -71,72 +165,45 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
             rewrites: getHistoryReWriteRuleList(options),
           })
         )
+
+        // middlewares.use((req, res, next) => {
+        //   console.log(req.url, 'url')
+        //   next()
+        // })
       },
 
-      transformIndexHtml: {
-        enforce: 'pre',
-        async transform(html, ctx) {
-          pageId = slash(path.normalize(path.relative(config.root, ctx.filename)))
-            .replace('.html', '_posthtml-view-js')
-
-          // console.log([ctx.filename], 'ctx')
-
-          return await transformHandle(
-            config,
-            options,
-            pageId,
-            virtualId,
-            pageCache,
-            chunkCache
-          )(html, ctx)
-        }
-      },
-
-      async resolveId(id, importer) {
-        // console.log([id, importer], 'resolveId')
-
-        if (id === virtualId) {
-          // console.log([
-          //   importer,
-          //   this.getModuleInfo(importer || id),
-          //   id,
-          // ])
-        }
-
-        if (id === virtualId) {
-
-          // console.log([id], 'virtualId')
-          return `${virtualId}/${pageId}`
-        }
-
-        if (id.startsWith(virtualId)) {
-          // console.log([id], 'resolveId')
-          return id
-        }
-
-        return null
-      },
-
-      async load(id) {
-        if (id === virtualId) {
-          // console.log([id], 'load virtualId')
-          return ''
-        }
-
-        if (id === `${virtualId}/${pageId}`) {
-          // console.log([id, pageCache, pageCache.get(pageId), pageId], 'pageId')
-          return pageCache.get(pageId) || ''
-        }
-
-        if (id.startsWith(virtualId)) {
-          // console.log([id], 'chunkCache')
-          return chunkCache.get(id) || ''
+      async transform(code, id) {
+        // enforce: 'pre',
+        // apply: 'serve',
+        if (rtl && options.rtl && isCssRequest(id)) {
+          return cssjanus(code, {
+            transformDirInUrl: rtl.transformDirInUrl || false,
+            transformEdgeInUrl: rtl.transformEdgeInUrl || false,
+          })
         }
 
         return null
       },
 
       async handleHotUpdate({ file, server }) {
+        // if (file.includes('.html') && (chunkCache.size > 0)) {
+        //   const timestamp = Date.now()
+
+        //   server.ws.send({
+        //     type: 'update',
+        //     updates: mapChunk(chunkCache).map((url) => {
+        //       url = '/@id/' + url
+
+        //       return {
+        //         type: url.endsWith('css') ? 'css-update' : 'js-update',
+        //         path: url,
+        //         acceptedPath: url,
+        //         timestamp: timestamp
+        //       }
+        //     })
+        //   })
+        // }
+
         if (
           file.includes('/' + options.mocksDirectory) || file.includes('.html')
         ) {
@@ -145,12 +212,13 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
             path: '*',
           })
         }
-      },
+      }
     }
   }
 
   return [
+    posthtmlViewDev(),
     posthtmlViewPages(),
-    posthtmlViewBundle(options)
+    posthtmlViewBundle(options, rtl)
   ]
 }

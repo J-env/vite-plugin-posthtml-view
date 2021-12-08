@@ -99,7 +99,18 @@ export default defineConfig(async (env) => {
           rename: false
         },
         styled: {},
-        js: {},
+
+        // rtl: {
+        //   type: 'new-html'
+        // },
+        rtl: {
+          type: 'syntax',
+          syntax: '<?php if($rtl): ?>[[rtl]]<?php else: ?>[[ltr]]<?php endif; ?>'
+        },
+
+        js: {
+          type: 'ts'
+        },
         stylePreprocessor: async (css) => {
           const output = scss.renderSync({
             data: preprocessorOptions.scss.additionalData + '\n' + css,

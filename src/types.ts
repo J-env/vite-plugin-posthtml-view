@@ -52,10 +52,7 @@ export interface VitePluginOptions {
    * rtl plugin
    * @default false
    */
-  rtl: ({
-    transformDirInUrl?: boolean
-    transformEdgeInUrl?: boolean
-  }) | boolean
+  rtl: boolean | Partial<RtlOptions>
 
   minifyHtml: MinifyOptions | boolean
 
@@ -64,6 +61,22 @@ export interface VitePluginOptions {
    * @default null
    */
   usePlugins: null | ((posthtml: PostHTMLType) => void)
+}
+
+export type RtlOptions = CssjanusOptions & {
+  /**
+   * @default 'syntax'
+   */
+  type: 'new-html' | 'syntax'
+
+  syntax: string
+
+  devPreview: (originalUrl?: string) => boolean
+}
+
+export interface CssjanusOptions {
+  transformDirInUrl?: boolean
+  transformEdgeInUrl?: boolean
 }
 
 // PostHTML View
@@ -157,6 +170,7 @@ interface ExtractHandleProps {
   from: string
   resolveId: string
   scopedHash: string
+  mainjs: string
   src?: string
   source?: string
 }

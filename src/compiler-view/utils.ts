@@ -1,4 +1,4 @@
-import type { Options, Components } from '../types'
+import type { Options, Components, RtlOptions } from '../types'
 
 /**
  * @private
@@ -14,17 +14,23 @@ export type OptionsUtils = Options & {
    * project (relative to root) and on different systems.
    * @private
    */
-  slash(src: string): string
+  slash(src: string, sl?: boolean): string
 
   /**
    * @private
    */
   prefix(str: string): string
 
+  cssjanus(css: string): string
+
+  noflip(css: string): string
+
   /**
    * @private
    */
   components: Components
+
+  rtl: false | RtlOptions
 }
 
 const hyphenateReg = /\B([A-Z])/g

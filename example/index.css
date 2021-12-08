@@ -1,0 +1,6 @@
+.float-css {
+  float: left;
+  margin-left: 0;
+  /* @noflip */
+  padding-right: 2px;
+}

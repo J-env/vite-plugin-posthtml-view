@@ -11,16 +11,18 @@ import { phpRenderToHtml } from './php'
 type Handle = (
   config: ResolvedConfig,
   options: PluginOptions,
-  pageId: string,
   virtualId: string,
   pageCache: Map<string, string>,
   chunkCache: Map<string, string>
 ) => IndexHtmlTransformHook
 
+export function getMainjs(mainjs: string) {
+  return mainjs.split('?__posthtml_view__=')[0]
+}
+
 export const transformHandle: Handle = (
   config,
   options,
-  pageId,
   virtualId,
   pageCache,
   chunkCache
@@ -56,19 +58,21 @@ export const transformHandle: Handle = (
             //   from: '${projectRoot}/example/view/index.html',
             //   resolveId: 'example/view/components/style-js/index.html',
             //   scopedHash: 'view-cnxw0a',
-            //   main: '/example/view/index.ts',
+            //   mainjs: '/example/view/index.ts?__posthtml_view__=0',
             //   source: '.style-js.view-cnxw0a{padding-left:20px;color:red;font-size:40px}'
             // }
+
+            const mainjs = getMainjs(meta.mainjs)
 
             const css_src = `${virtualId}/${meta.resolveId.replace('.html', `.css`)}`
             const import_css = `import '${css_src}';`
 
             chunkCache.set(css_src, meta.source || '')
 
-            const prev_source = pageCache.get(pageId) || ''
+            const prev_source = pageCache.get(mainjs) || ''
 
             if (!prev_source.includes(css_src)) {
-              pageCache.set(pageId, prev_source + import_css)
+              pageCache.set(mainjs, prev_source + import_css)
             }
           }
         },
@@ -80,19 +84,19 @@ export const transformHandle: Handle = (
             //   from: '${projectRoot}/example/view/index.html',
             //   resolveId: 'example/view/components/style-js/index.html',
             //   scopedHash: 'view-cnxw0a',
-            //   main: '/example/view/index.ts',
+            //   mainjs: '/example/view/index.ts?__posthtml_view__=0',
             //   source: '',
             //   src: 'example/view/components/style-js/index'
             // }
 
-            if (meta.src) {
-              meta.src = meta.src[0] === '/' ? meta.src : `/${meta.src}`
+            const mainjs = getMainjs(meta.mainjs)
 
-              const prev_source = pageCache.get(pageId) || ''
+            if (meta.src) {
+              const prev_source = pageCache.get(mainjs) || ''
               const import_js = `import '${meta.src}';`
 
               if (!prev_source.includes(meta.src)) {
-                pageCache.set(pageId, prev_source + import_js)
+                pageCache.set(mainjs, prev_source + import_js)
               }
 
             } else {
@@ -101,10 +105,10 @@ export const transformHandle: Handle = (
 
               chunkCache.set(js_src, meta.source || '')
 
-              const prev_source = pageCache.get(pageId) || ''
+              const prev_source = pageCache.get(mainjs) || ''
 
               if (!prev_source.includes(js_src)) {
-                pageCache.set(pageId, prev_source + import_js)
+                pageCache.set(mainjs, prev_source + import_js)
               }
             }
           }

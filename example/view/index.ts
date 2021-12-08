@@ -1,1 +1,1 @@
-import 'virtual:posthtml-view'
+console.log('test view-js')

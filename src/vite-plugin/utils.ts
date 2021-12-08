@@ -12,9 +12,14 @@ interface EntriesItem {
   route: string
 }
 
+export function isCssRequest(id: string) {
+  return /\.(css|scss|less|sass|styl|stylus|pcss|postcss)$/.test(id)
+}
+
 export function getConfig(config: UserConfig, options: Options) {
   config.build = config.build || {}
   config.build.rollupOptions = config.build.rollupOptions || {}
+  config.build.ssr = false
 
   const { input, pages } = getInputPages(config.root || process.cwd(), options)
 

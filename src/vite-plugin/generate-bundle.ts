@@ -1,14 +1,13 @@
 import type { Plugin } from 'vite'
 import { createFilter } from '@rollup/pluginutils'
 // import shell from 'shelljs'
-import posthtml from 'posthtml'
+import posthtml, { RawNode } from 'posthtml'
 import match from 'posthtml-match-helper'
 import { minify, Options as MinifyOptions } from 'html-minifier-terser'
 
 import { decryptHtml, htmlConversion } from '../utils/html'
-import type { PluginOptions } from '../types'
-
-const cssjanus = require('cssjanus')
+import { placeholderToNoflip, cssjanus } from '../utils/rtl'
+import type { PluginOptions, RtlOptions } from '../types'
 
 const minifyHtml: MinifyOptions = {
   collapseBooleanAttributes: true,
@@ -27,9 +26,41 @@ const minifyHtml: MinifyOptions = {
   useShortDoctype: true
 }
 
-export function posthtmlViewBundle(
-  options: PluginOptions
-): Plugin {
+const rtlMark = '[[rtl]]'
+const ltrMark = '[[ltr]]'
+
+const defaultRtlOptions: RtlOptions = {
+  type: 'syntax',
+
+  syntax: `<?php if($rtl): ?>${rtlMark}<?php else: ?>${ltrMark}<?php endif; ?>`,
+
+  devPreview: (originalUrl) => {
+    if (
+      originalUrl &&
+      (
+        originalUrl.includes('rtl=1') ||
+        originalUrl.includes('lang=ar')
+      )
+    ) {
+      return true
+    }
+
+    return false
+  }
+}
+
+export function getRtlOptions(options: PluginOptions): RtlOptions | false {
+  return typeof options.rtl === 'boolean'
+    ? options.rtl
+      ? defaultRtlOptions
+      : false
+    : {
+      ...defaultRtlOptions,
+      ...options.rtl
+    }
+}
+
+export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | false): Plugin {
   if (typeof options.minifyHtml === 'boolean') {
     options.minifyHtml && (options.minifyHtml = minifyHtml)
 
@@ -40,19 +71,35 @@ export function posthtmlViewBundle(
     }
   }
 
-  const { ...cssjanusoptions } = (
-    typeof options.rtl === 'boolean'
-      ? {}
-      : options.rtl
-  )
-
   const filter = createFilter(['**/*.html'])
 
   // let config: ResolvedConfig
 
+  const { type, syntax } = rtl ? rtl : defaultRtlOptions
+
+  const janusCss = (css: string) => cssjanus(css, {
+    transformDirInUrl: rtl && rtl.transformDirInUrl || false,
+    transformEdgeInUrl: rtl && rtl.transformEdgeInUrl || false,
+  })
+
+  const correctSyntax = () => {
+    return syntax && (syntax.includes(rtlMark) || syntax.includes(ltrMark))
+  }
+
+  let syntaxArr: string[] | null = null
+
+  if (rtl && type === 'syntax' && correctSyntax()) {
+    const sm = syntax.match(/(.*)\[\[(rtl|ltr)\]\](.*)\[\[(rtl|ltr)\]\](.*)/si)
+
+    // ["<?php if($rtl): ?>", "rtl", "<?php else: ?>", "ltr", "<?php endif; ?>"]
+    if (sm && sm.length >= 6) {
+      syntaxArr = sm.slice(1).map(item => item.trim()).filter(Boolean)
+    }
+  }
+
   const normalizeHtml = async (source: string) => {
     return (await posthtml([])
-      .use(async (tree) => {
+      .use((tree) => {
         tree.match((match('head')), (head) => {
           const css: string[] = []
 
@@ -75,7 +122,14 @@ export function posthtmlViewBundle(
           }))
 
           if (head.content) {
-            head.content = [...head.content, ...content]
+            const index = getTargetNodeIndex(head.content)
+
+            if (index === null) {
+              head.content = [...head.content, ...content]
+
+            } else {
+              head.content.splice(index + 1, 0, ...content)
+            }
 
           } else {
             head.content = content
@@ -85,6 +139,87 @@ export function posthtmlViewBundle(
         })
 
         return tree
+      })
+      .use((tree) => {
+        const syntaxStyleTag = 'posthtml-view-syntax-style-x'
+
+        tree.match(match('style'), (style) => {
+          let content = [].concat((style.content as []) || '').join('').trim()
+
+          // remove    noflip placeholder
+          content = content && placeholderToNoflip(content, '')
+
+          // '<?php if($rtl): ?>[[rtl]]<?php else: ?>[[ltr]]<?php endif; ?>'
+          if (content && syntaxArr && syntaxArr.length) {
+            const rtlContent = janusCss(content)
+
+            if (rtlContent !== content) {
+              style.content = syntaxArr.map(item => {
+                if (item === 'rtl') {
+                  return {
+                    tag: syntaxStyleTag,
+                    attrs: style.attrs,
+                    content: rtlContent
+                  } as any
+                }
+
+                if (item === 'ltr') {
+                  return {
+                    tag: syntaxStyleTag,
+                    attrs: style.attrs,
+                    content,
+                  } as any
+                }
+
+                return item
+              })
+
+              style.tag = false as any
+              style.attrs = undefined
+
+              return style
+            }
+          }
+
+          if (content) {
+            style.content = [content]
+          }
+
+          return style
+        })
+
+        if (syntaxArr && syntaxArr.length) {
+          tree.match(match('link[href]'), (link) => {
+            const href = link.attrs && link.attrs.href
+
+            if (link.attrs && href && href.endsWith('.css') && syntaxArr) {
+              const rtlHref = href.replace('.css', '.rtl.css')
+
+              link.attrs.href = syntaxArr.map(item => {
+                if (item === 'rtl') {
+                  return rtlHref
+                }
+
+                if (item === 'ltr') {
+                  return href
+                }
+
+                return item
+              }).join('')
+            }
+
+            return link
+          })
+        }
+
+        return Promise.resolve().then(() => {
+          tree.match(match(syntaxStyleTag), (node) => {
+            node.tag = 'style'
+            return node
+          })
+
+          return tree
+        })
       })
       .process(source, {}))
       .html
@@ -99,32 +234,28 @@ export function posthtmlViewBundle(
     //   config = _config
     // },
 
-    async generateBundle(_opts, outBundle) {
-      // == remove css in js ========================
-      // if (bundle.type === 'chunk' && bundle.fileName.includes('-legacy')) {
-      // }
+    async generateBundle(gb, bundles, isWrite) {
+      for (const bundle of Object.values(bundles)) {
+        // == remove css in js ========================
+        // if (bundle.type === 'chunk' && bundle.fileName.includes('-legacy')) {
+        // }
 
-      for (const bundle of Object.values(outBundle)) {
         // == rtl css ========================
-        if (
-          bundle.type === 'asset' &&
-          bundle.fileName.endsWith('.css') &&
-          options.rtl
-        ) {
-          const rtlFileName = bundle.fileName.replace('.css', '.rtl.css')
+        if (bundle.type === 'asset' && bundle.fileName.endsWith('.css')) {
+          const source = stringSource(bundle.source)
 
-          const rtlCss = cssjanus.transform(bundle.source, {
-            transformDirInUrl: false,
-            transformEdgeInUrl: false,
-            ...cssjanusoptions
-          })
+          // ltr
+          bundle.source = placeholderToNoflip(source, '')
 
-          this.emitFile({
-            type: 'asset',
-            fileName: rtlFileName,
-            name: bundle.name ? bundle.name.replace('.css', '.rtl.css') : undefined,
-            source: rtlCss
-          })
+          // rtl
+          if (rtl) {
+            this.emitFile({
+              type: 'asset',
+              fileName: bundle.fileName.replace('.css', '.rtl.css'),
+              name: bundle.name ? bundle.name.replace('.css', '.rtl.css') : undefined,
+              source: janusCss(source)
+            })
+          }
         }
 
         // == html ========================
@@ -151,26 +282,47 @@ export function posthtmlViewBundle(
           // 4
           bundle.source = source
 
-          if (options.buildPagesDirectory !== options.pagesDirectory) {
-            const i = bundle.fileName.indexOf(options.pagesDirectory)
+          const { fileName, name } = renameHandle(bundle.fileName, bundle.name, options)
 
-            if (i >= 0) {
-              bundle.fileName = options.buildPagesDirectory
-                + bundle.fileName.slice(i + options.pagesDirectory.length)
+          bundle.fileName = fileName
+          bundle.name = name
+
+          if (rtl && type === 'new-html') {
+            const html = (await posthtml([])
+              .use((tree) => {
+                tree.match(match('link[href]'), (link) => {
+                  if (
+                    link.attrs &&
+                    link.attrs.href && link.attrs.href.endsWith('.css')
+                  ) {
+                    link.attrs.href = link.attrs.href.replace('.css', '.rtl.css')
+                  }
+
+                  return link
+                })
+
+                tree.match(match('style'), (style) => {
+                  const content = [].concat((style.content as []) || '').join('').trim()
+
+                  if (content) {
+                    style.content = [janusCss(content)]
+                  }
+
+                  return style
+                })
+
+                return tree
+              })
+              .process(source, {})).html
+
+            if (html) {
+              this.emitFile({
+                type: 'asset',
+                fileName: fileName.replace(/\.(html?|php)/g, '.rtl.$1'),
+                name: name ? name.replace(/\.(html?|php)/g, '.rtl.$1') : undefined,
+                source: html
+              })
             }
-          }
-
-          // to php
-          if (options.php && options.php.rename) {
-            const renameHandle = (match: string, to: string) => {
-              bundle.fileName = bundle.fileName.replace(match, to)
-
-              if (bundle.name) {
-                bundle.name = bundle.name.replace(match, to)
-              }
-            }
-
-            renameHandle('.html', '.php')
           }
         }
       }
@@ -199,10 +351,75 @@ export function posthtmlViewBundle(
   }
 }
 
+function renameHandle(fileName: string, name: string | undefined, options: PluginOptions) {
+  const {
+    buildPagesDirectory,
+    pagesDirectory,
+    php
+  } = options
+
+  if (buildPagesDirectory !== pagesDirectory) {
+    const i = fileName.indexOf(pagesDirectory)
+
+    if (i >= 0) {
+      fileName = buildPagesDirectory + fileName.slice(i + pagesDirectory.length)
+    }
+  }
+
+  // to php
+  if (php && php.rename) {
+    fileName = fileName.replace(/\.(html?)/g, '.php')
+
+    if (name) {
+      name = name.replace(/\.(html?)/g, '.php')
+    }
+  }
+
+  return {
+    fileName,
+    name
+  }
+}
+
 function stringSource(source: string | Uint8Array) {
   if (source instanceof Uint8Array) {
     return Buffer.from(source).toString('utf-8')
   }
 
   return source
+}
+
+function getTargetNodeIndex(content) {
+  const length = content.length
+
+  // [].splice
+  let index: number | null = null
+
+  for (let i = length - 1; i >= 0; i--) {
+    const elem = content[i] as RawNode
+
+    if (typeof elem === 'string') {
+      continue
+    }
+
+    const attrs = elem.attrs || {}
+
+    const hasLinkCss = (
+      elem.tag === 'link' &&
+      attrs.rel === 'stylesheet' &&
+      // todo
+      (attrs.href && (attrs.href as string).endsWith('.css'))
+    )
+
+    const hasModule = hasLinkCss ||
+      (elem.tag === 'link' && attrs.rel === 'modulepreload') ||
+      (elem.tag === 'script' && attrs.type === 'module')
+
+    if (hasModule) {
+      index = i
+      break
+    }
+  }
+
+  return index
 }
