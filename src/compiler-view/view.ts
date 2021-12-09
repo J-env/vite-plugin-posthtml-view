@@ -128,7 +128,7 @@ interface CssCache {
 type ResolveId = string
 
 async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
-  const { styled, js, from, mode } = options
+  const { styled, js, from, mode, rtl } = options
   const isDev = mode === 'development'
   const headStyleId = ''
   const attrIdKey = '__posthtml_view_css__'
@@ -149,6 +149,14 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
       }
 
       node.content = [css_container, ...(node.content || [])]
+
+      return node
+    })
+
+    tree.match(match('html'), (node) => {
+      node.attrs = node.attrs || {}
+
+      node.attrs.dir = rtl ? 'rtl' : 'ltr'
 
       return node
     })

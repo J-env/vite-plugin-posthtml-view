@@ -210,6 +210,26 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
 
             return link
           })
+
+          tree.match(match('html'), (node) => {
+            if (syntaxArr) {
+              node.attrs = node.attrs || {}
+
+              node.attrs.dir = syntaxArr.map(item => {
+                if (item === 'rtl') {
+                  return 'rtl'
+                }
+
+                if (item === 'ltr') {
+                  return 'ltr'
+                }
+
+                return item
+              }).join('')
+            }
+
+            return node
+          })
         }
 
         return Promise.resolve().then(() => {
@@ -290,6 +310,13 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           if (rtl && type === 'new-html') {
             const html = (await posthtml([])
               .use((tree) => {
+                tree.match(match('html'), (node) => {
+                  node.attrs = node.attrs || {}
+                  node.attrs.dir = 'rtl'
+
+                  return node
+                })
+
                 tree.match(match('link[href]'), (link) => {
                   if (
                     link.attrs &&
