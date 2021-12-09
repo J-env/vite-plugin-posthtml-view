@@ -20,16 +20,18 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
     pagesDirectory: 'pages',
     mocksDirectory: 'mocks',
     buildPagesDirectory: 'pages',
+    cacheDirectory: '.posthtml-view-cache',
     usePlugins: null,
     rtl: false,
-    minifyHtml: true
+    minifyHtml: true,
+    minifyClassnames: false,
   }, _opts || {})
 
   options.pagesDirectory = options.pagesDirectory || 'pages'
   options.buildPagesDirectory = options.buildPagesDirectory || options.pagesDirectory
+  options.cacheDirectory = options.cacheDirectory || '.posthtml-view-cache'
 
   options.getOptions = (opts) => {
-    options.cacheDirectory = opts.cacheDirectory || '.posthtml-view-cache'
     options.styled = opts.styled
   }
 
@@ -65,6 +67,9 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
           if (config.command === 'serve') {
             if (rtl && typeof rtl.devPreview === 'function' && rtl.devPreview(ctx.originalUrl)) {
               options.rtl = rtl
+
+            } else {
+              options.rtl = false
             }
 
           } else {

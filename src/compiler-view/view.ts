@@ -14,7 +14,7 @@ import type {
   ExtractHandle
 } from '../types'
 
-import { OptionsUtils, htmlElements, getTag } from './utils'
+import { OptionsUtils, htmlElements, svgElements, getTag, isDynamicCss } from './utils'
 import { processWithPostHtml, parseAttrsToLocals, parseTemplate } from './parser'
 import { ScopedClasses, postcssScopedParser } from './css'
 
@@ -63,6 +63,15 @@ export function parse(options: OptionsUtils) {
         if (component) {
           if (htmlElements.includes(component.tag)) {
             throw new Error(`The component <${component.tag}> is the HTML tag. page file: ${options.from}`)
+
+          } else if (svgElements.includes(component.tag)) {
+            tree.match('svg', (svg) => {
+              tree.match.call(svg, match(component.tag), (node) => {
+                throw new Error(`The component <${component.tag}> is the SVG tag. page file: ${options.from}`)
+              })
+
+              return svg
+            })
           }
 
           if (node.attrs) {
@@ -527,7 +536,7 @@ function parseStyleAndScript(
       let src = attrs['src'] as string
 
       // dynamic and php
-      const dynamic = attrs['dynamic'] != null || !!(content && /\\{\\%(\\:|\\#)(.*?)\\%\\}/gs.test(content))
+      const dynamic = attrs['dynamic'] != null || isDynamicCss(content)
 
       if (src || content) {
         promises.push(
@@ -609,6 +618,7 @@ function parseStyleAndScript(
         scoped_css,
         component.resolveId,
         options,
+        component.src,
         (css) => css.replace(start_mark, '').replace(end_mark, '')
       )
 

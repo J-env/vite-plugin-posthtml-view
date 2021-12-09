@@ -49,6 +49,22 @@ export function getTag(src: string) {
   return tag.join('-').replace(/[^-_a-z0-9\u00A0-\uFFFF]/gi, '-').replace(/^\d/, '-')
 }
 
+function dynamicTest(css: string) {
+  return !!(css && /\\{\\%(\\:|\\#)(.*?)\\%\\}/gs.test(css))
+}
+
+export function isDynamicCss(css: string): boolean {
+  css = css && css.replace(/\/\*(.*?)\*\//gs, (s) => {
+    if (dynamicTest(s)) {
+      return ''
+    }
+
+    return s
+  })
+
+  return dynamicTest(css)
+}
+
 export const htmlElements = [
   'a',
   'abbr',
@@ -188,4 +204,80 @@ export const htmlElements = [
   'video',
   'wbr',
   'xmp'
+]
+
+export const svgElements = [
+  'a',
+  'animate',
+  'animateMotion',
+  'animateTransform',
+  'circle',
+  'clipPath',
+  'color-profile',
+  'defs',
+  'desc',
+  'discard',
+  'ellipse',
+  'feBlend',
+  'feColorMatrix',
+  'feComponentTransfer',
+  'feComposite',
+  'feConvolveMatrix',
+  'feDiffuseLighting',
+  'feDisplacementMap',
+  'feDistantLight',
+  "feDropShadow",
+  'feFlood',
+  'feFuncA',
+  'feFuncB',
+  'feFuncG',
+  'feFuncR',
+  'feGaussianBlur',
+  'feImage',
+  'feMerge',
+  'feMergeNode',
+  'feMorphology',
+  'feOffset',
+  'fePointLight',
+  'feSpecularLighting',
+  'feSpotLight',
+  'feTile',
+  'feTurbulence',
+  'filter',
+  'foreignObject',
+  'g',
+  "hatch",
+  "hatchpath",
+  'image',
+  'line',
+  'linearGradient',
+  'marker',
+  'mask',
+  'mesh',
+  'meshgradient',
+  'meshpatch',
+  'meshrow',
+  'metadata',
+  'mpath',
+  'path',
+  'pattern',
+  'polygon',
+  'polyline',
+  'radialGradient',
+  'rect',
+  'script',
+  'set',
+  'solidcolor',
+  'stop',
+  'style',
+  'svg',
+  'switch',
+  'symbol',
+  'text',
+  'textPath',
+  'title',
+  'tspan',
+  'unknown',
+  'use',
+  'view'
 ]

@@ -8,13 +8,21 @@
   <title>{{ $attrs.title || 'layout base' }}</title>
 
   <style to="*" global>
-    body {
-      background-color: aquamarine;
+    * {
+      box-sizing: border-box;
     }
   </style>
 </head>
 
 <body>
+  <slot name="header"></slot>
+
+  <main role="main">
+    <slot name="main"></slot>
+  </main>
+
+  <slot name="footer"></slot>
+
   <slot></slot>
 </body>
 

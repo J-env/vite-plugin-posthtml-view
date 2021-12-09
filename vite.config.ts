@@ -108,6 +108,8 @@ export default defineConfig(async (env) => {
           syntax: '<?php if($rtl): ?>[[rtl]]<?php else: ?>[[ltr]]<?php endif; ?>'
         },
 
+        minifyClassnames: true,
+
         js: {
           type: 'ts'
         },

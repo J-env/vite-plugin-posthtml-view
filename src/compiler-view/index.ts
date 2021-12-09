@@ -14,7 +14,6 @@ export function compilerViewPlugin(_options: Partial<Options>) {
   options.root = options.root || process.cwd()
   options.mode = options.mode || 'development'
   options.encoding = options.encoding || 'utf8'
-  options.cacheDirectory = options.cacheDirectory || '.posthtml-view-cache'
   options.viewPrefix = options.viewPrefix || 'view:'
 
   options.from = options.from || ''
@@ -34,7 +33,6 @@ export function compilerViewPlugin(_options: Partial<Options>) {
     type: 'scoped',
     to: 'head',
     prefix: 'view-',
-    classNameSlug: null,
     ...options.styled,
   }
 

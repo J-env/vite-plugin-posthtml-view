@@ -26,7 +26,7 @@ export function* generateName(filters: RegExp[] = [], upperCase: boolean = true)
     abc = abc + abc.toUpperCase()
   }
 
-  const digital = '0123456789'
+  const digital = '0123456789_-'
   const str = abc + digital
 
   const abc_len = abc.length

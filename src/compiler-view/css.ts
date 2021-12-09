@@ -24,6 +24,7 @@ export function postcssScopedParser(
   css: string,
   resolveId: string,
   options: OptionsUtils,
+  from: string,
   _hashCleanHandle?: (css: string) => string
 ) {
   _hashCleanHandle = _hashCleanHandle || hashCleanHandle
@@ -33,7 +34,9 @@ export function postcssScopedParser(
 
   const scopedHash = toValidCSSIdentifier((options.styled.prefix || '') + hash)
 
-  const ast = postcssSafeParser(css)
+  const ast = postcssSafeParser(css, {
+    from: from
+  })
 
   const scopedClasses: ScopedClasses = {
     classNames: [],

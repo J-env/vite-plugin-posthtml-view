@@ -1,22 +1,24 @@
 <layout-base title="home">
-  <!--
-  <layout-base></layout-base> => @see: /example/_layout/global-components.html
-  <my-button></my-button> => @see: /example/_layout/global-components.html
- -->
+  <template slot="main">
+    <!--
+      <layout-base></layout-base> => @see: /example/_layout/global-components.html
+      <my-button></my-button> => @see: /example/_layout/global-components.html
+    -->
 
-  <div class="float-left">home page</div>
+    <div class="float-left">home page</div>
 
-  <my-button>button click</my-button>
+    <my-button>button click</my-button>
 
-  <hr>
+    <hr>
 
-  <view:component src="./_demo/register-components.html">
-    <template slot="bottom">
-      <div>this is bottom</div>
-    </template>
+    <view:component src="./_demo/register-components.html">
+      <template slot="bottom">
+        <div>this is bottom</div>
+      </template>
 
-    <div>this is default</div>
-  </view:component>
+      <div>this is default</div>
+    </view:component>
+  </template>
 
   <script type="module" src="/example/index.ts"></script>
 </layout-base>

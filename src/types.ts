@@ -37,6 +37,11 @@ export interface VitePluginOptions {
   buildPagesDirectory: 'pages' | StringType
 
   /**
+   * @default '.posthtml-view-cache'
+   */
+  cacheDirectory: '.posthtml-view-cache' | StringType
+
+  /**
    * @default null
    */
   php?: {
@@ -57,11 +62,60 @@ export interface VitePluginOptions {
   minifyHtml: MinifyOptions | boolean
 
   /**
+   * Only used in production environments
+   * @default false
+   */
+  minifyClassnames: Partial<MinifyClassnames> | boolean
+
+  /**
    * usePlugins(posthtml) => posthtml.use(plugins).use(plugins).use(plugins)
    * @default null
    */
   usePlugins: null | ((posthtml: PostHTMLType) => void)
 }
+
+export interface MinifyClassnames {
+  /**
+   * Custom generated classname and id
+   * @default null
+   */
+  slugCallback: SlugCallback | null
+
+  /**
+   * Ensure classnames build is consistent
+   * @default true
+   */
+  enableCache: boolean
+
+  /**
+   * @default []
+   */
+  generateNameFilters: RegExp[]
+
+  /**
+   * @default true
+   */
+  upperCase: boolean
+
+  /**
+   * .js-click, #js-dom
+   * @default [/^(\.|#)js-/]
+   */
+  filters: RegExp[]
+
+  /**
+   * @example ['x-transition']
+   * @default []
+   */
+  attributes: string[]
+
+  /**
+   * @default ''
+   */
+  prefix: string
+}
+
+export type SlugCallback = (className: string) => string
 
 export type RtlOptions = CssjanusOptions & {
   /**
@@ -97,11 +151,6 @@ export interface Options {
    * @default 'utf8'
    */
   encoding: BufferEncoding
-
-  /**
-   * @default '.posthtml-view-cache'
-   */
-  cacheDirectory: '.posthtml-view-cache' | StringType
 
   /**
    * <div view:if=""></div>
@@ -187,7 +236,6 @@ export interface StyledOptions {
    */
   type: StyleType | StringType
 
-
   prefix: 'view-' | StringType
 
   /**
@@ -196,12 +244,6 @@ export interface StyledOptions {
   to: StyleToSelector
 
   extract?: ExtractHandle
-
-  /**
-   * Custom generated class name
-   * @default null
-   */
-  classNameSlug: ClassNameSlugFn | null
 }
 
 export type StylePreprocessor = (source: string) =>
@@ -216,14 +258,6 @@ export type StyleToSelector = '*' | 'file' | 'head'
 export type StyleType = 'scoped' | 'global'
 
 export type StringType = (string & {})
-
-export type ClassNameSlugType = string
-
-export type ClassNameSlugFn = (
-  slug: string,
-  className: string,
-  type: StyleType
-) => string
 
 // ==========================================================================
 // ==================================================================

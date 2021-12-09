@@ -5,9 +5,11 @@ import posthtml, { RawNode } from 'posthtml'
 import match from 'posthtml-match-helper'
 import { minify, Options as MinifyOptions } from 'html-minifier-terser'
 
+import type { PluginOptions, RtlOptions, MinifyClassnames } from '../types'
 import { decryptHtml, htmlConversion } from '../utils/html'
 import { placeholderToNoflip, cssjanus } from '../utils/rtl'
-import type { PluginOptions, RtlOptions } from '../types'
+import { toValidCSSIdentifier } from '../utils'
+import { minifyClassesHandle, joinValues, htmlFor, useTagId } from './classes'
 
 const minifyHtml: MinifyOptions = {
   collapseBooleanAttributes: true,
@@ -48,6 +50,19 @@ const defaultRtlOptions: RtlOptions = {
     return false
   }
 }
+
+const defaultMinifyOptions: MinifyClassnames = {
+  // slugCallback: (className) => className,
+  slugCallback: null,
+  enableCache: true,
+  generateNameFilters: [],
+  upperCase: true,
+  filters: [/^(\.|#)js-/],
+  attributes: [],
+  prefix: ''
+}
+
+let minifyOptions: MinifyClassnames
 
 export function getRtlOptions(options: PluginOptions): RtlOptions | false {
   return typeof options.rtl === 'boolean'
@@ -100,7 +115,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
   const normalizeHtml = async (source: string) => {
     return (await posthtml([])
       .use((tree) => {
-        tree.match((match('head')), (head) => {
+        tree.match(match('head'), (head) => {
           const css: string[] = []
 
           tree.match(match('style[__posthtml_view_css__]'), (style) => {
@@ -137,6 +152,91 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
 
           return head
         })
+
+        if (minifyOptions) {
+          tree.match(match('style'), (style) => {
+            if (style.attrs && style.attrs['data-min-class-ignore'] != null) {
+              delete style.attrs['data-min-class-ignore']
+              return style
+            }
+
+            const content = [].concat((style.content as []) || '').join('').trim()
+
+            if (content) {
+              style.content = [minifyClassesHandle(content, minifyOptions, options)]
+            }
+
+            return style
+          })
+        }
+
+        return tree
+      })
+      .use((tree) => {
+        if (minifyOptions) {
+          tree.walk((node) => {
+            if (node.attrs) {
+              if (minifyOptions.attributes && minifyOptions.attributes.length) {
+                const attrs = Object.keys(node.attrs)
+
+                minifyOptions.attributes.forEach((item) => {
+                  if (item === 'id' || item === 'class') return
+
+                  const at = attrs.find(attr => attr.includes(item))
+
+                  if (at) {
+                    node.attrs[at] = joinValues(node.attrs[at])
+                  }
+                })
+              }
+
+              if (node.attrs.class) {
+                node.attrs.class = joinValues(node.attrs.class)
+              }
+
+              if (node.attrs.id) {
+                node.attrs.id = joinValues(node.attrs.id, true)
+              }
+
+              if (node.attrs['for']) {
+                const forId = htmlFor(node.attrs['for'])
+
+                if (forId) {
+                  node.attrs['for'] = forId
+                }
+              }
+
+              // svg fill="url(#id)"
+              const urls = ['mask', 'fill', 'filter']
+
+              urls.forEach((item) => {
+                if (node.attrs[item]) {
+                  const tagId = useTagId(node.attrs[item].replace(/url\((.*?)\)/g, '$1'))
+
+                  if (tagId) {
+                    node.attrs[item] = tagId
+                  }
+                }
+              })
+            }
+
+            // svg
+            if (
+              node.tag === 'use' &&
+              node.attrs &&
+              (node.attrs.href || node.attrs['xlink:href'])
+            ) {
+              const useAttr = node.attrs.href ? 'href' : 'xlink:href'
+              const tagId = useTagId(node.attrs[useAttr] || '')
+
+              if (tagId) {
+                node.attrs[useAttr] = tagId
+              }
+            }
+
+            return node
+          })
+        }
 
         return tree
       })
@@ -254,7 +354,17 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
     //   config = _config
     // },
 
-    async generateBundle(gb, bundles, isWrite) {
+    async generateBundle(gb, bundles) {
+      const minifyClassnames = options.minifyClassnames
+
+      if (minifyClassnames && !minifyOptions) {
+        minifyOptions = minifyClassnames === true
+          ? defaultMinifyOptions
+          : ({ ...defaultMinifyOptions, ...minifyClassnames })
+
+        minifyOptions.prefix = minifyOptions.prefix && toValidCSSIdentifier(minifyOptions.prefix)
+      }
+
       for (const bundle of Object.values(bundles)) {
         // == remove css in js ========================
         // if (bundle.type === 'chunk' && bundle.fileName.includes('-legacy')) {
@@ -262,7 +372,11 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
 
         // == rtl css ========================
         if (bundle.type === 'asset' && bundle.fileName.endsWith('.css')) {
-          const source = stringSource(bundle.source)
+          let source = stringSource(bundle.source)
+
+          if (minifyOptions) {
+            source = minifyClassesHandle(source, minifyOptions, options)
+          }
 
           // ltr
           bundle.source = placeholderToNoflip(source, '')
