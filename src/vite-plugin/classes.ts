@@ -4,7 +4,7 @@ import postcssSafeParser from 'postcss-safe-parser'
 import postcssSelectorParser from 'postcss-selector-parser'
 
 import type { PluginOptions, MinifyClassnames } from '../types'
-import { generateName } from '../utils'
+import { generateName, toValidCSSIdentifier } from '../utils'
 
 const objCache = {
   classes: {},
@@ -143,7 +143,14 @@ function addClassesValues(value: string) {
     cache.classes[value] = classGenerator.next().value
   }
 
-  const v = cache.classes[value]
+  let v = cache.classes[value]
+
+  if (typeof minify.classNameSlug === 'function') {
+    try {
+      v = toValidCSSIdentifier(minify.classNameSlug(v || value, value, false)) || v
+    } catch (e) {
+    }
+  }
 
   if (minify.enableCache) {
     classesValues = classesValues || new Set()
@@ -163,7 +170,14 @@ function addIdValues(value: string) {
     cache.ids[value] = idGenerator.next().value
   }
 
-  const v = cache.ids[value]
+  let v = cache.ids[value]
+
+  if (typeof minify.classNameSlug === 'function') {
+    try {
+      v = toValidCSSIdentifier(minify.classNameSlug(v || value, value, true)) || v
+    } catch (e) {
+    }
+  }
 
   if (minify.enableCache) {
     idValues = idValues || new Set()

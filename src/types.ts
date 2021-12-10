@@ -88,7 +88,7 @@ export interface MinifyClassnames {
    * Custom generated classname and id
    * @default null
    */
-  slugCallback: SlugCallback | null
+  classNameSlug: classNameSlug | null
 
   /**
    * Ensure classnames build is consistent
@@ -129,7 +129,7 @@ export interface MinifyClassnames {
   __cache_file__: string
 }
 
-export type SlugCallback = (className: string) => string
+export type classNameSlug = (slug: string, className: string, isId: boolean) => string
 
 export type RtlOptions = CssjanusOptions & {
   /**

@@ -36,8 +36,7 @@ const defaultRtlOptions: RtlOptions = {
 }
 
 const defaultMinifyOptions: MinifyClassnames = {
-  // slugCallback: (className) => className,
-  slugCallback: null,
+  classNameSlug: null,
   enableCache: true,
   generateNameFilters: [],
   upperCase: true,

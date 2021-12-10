@@ -11,6 +11,8 @@ export function getContentHash(content: string, start?: number, end?: number): s
 }
 
 export function toValidCSSIdentifier(s: string) {
+  if (!s) return s
+
   return s.replace(/[^-_a-z0-9\u00A0-\uFFFF]/gi, '_').replace(/^\d/, '_')
 }
 
