@@ -14,12 +14,22 @@ export function toValidCSSIdentifier(s: string) {
   return s.replace(/[^-_a-z0-9\u00A0-\uFFFF]/gi, '_').replace(/^\d/, '_')
 }
 
+function _callback(name) {
+  return true
+}
+
 /**
  * @desc generate name a, b, ... A, B, ... ac, ab, ...
  * function* [es6 generator]
  * @example const g = generateName([], false); g.next().value;
  */
-export function* generateName(filters: RegExp[] = [], upperCase: boolean = true) {
+export function* generateName(
+  filters: RegExp[] = [],
+  upperCase: boolean = true,
+  callback?: (name: string) => boolean
+) {
+  callback = callback || _callback
+
   let abc = 'abcdefghijklmnopqrstuvwxyz'
 
   if (upperCase) {
@@ -48,7 +58,7 @@ export function* generateName(filters: RegExp[] = [], upperCase: boolean = true)
 
     } while (num > 0)
 
-    if (!filters.some(reg => reg.test(name))) {
+    if (!filters.some(reg => reg.test(name)) && callback(name)) {
       yield name
     }
 

@@ -189,7 +189,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                   const tagId = useTagId(node.attrs[item].replace(/url\((.*?)\)/g, '$1'))
 
                   if (tagId) {
-                    node.attrs[item] = tagId
+                    node.attrs[item] = `url(#${tagId})`
                   }
                 }
               })
@@ -316,6 +316,17 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           return tree
         })
       })
+      .use((tree) => {
+        return Promise.resolve().then(() => {
+          let _tree
+
+          if (typeof options.generateUsePlugins === 'function') {
+            _tree = options.generateUsePlugins(tree)
+          }
+
+          return _tree || tree
+        })
+      })
       .process(source, {}))
       .html
   }
@@ -339,6 +350,8 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
 
         minifyOptions.prefix = minifyOptions.prefix && toValidCSSIdentifier(minifyOptions.prefix)
 
+        minifyOptions.filters = [...minifyOptions.filters, '#vite-legacy-polyfill', '#vite-legacy-entry']
+
         if (minifyOptions.enableCache) {
           minifyOptions.__cache_file__ = path.resolve(config.root, path.join(options.cacheDirectory, 'css', '_css.js'))
 
@@ -348,10 +361,6 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
       }
 
       for (const bundle of Object.values(bundles)) {
-        // == remove css in js ========================
-        // if (bundle.type === 'chunk' && bundle.fileName.includes('-legacy')) {
-        // }
-
         // == rtl css ========================
         if (bundle.type === 'asset' && bundle.fileName.endsWith('.css')) {
           let source = stringSource(bundle.source)
@@ -446,6 +455,16 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
             }
           }
         }
+
+        // == remove css in js ========================
+        // @TODO:
+        if (
+          bundle.type === 'chunk' && bundle.fileName.includes('-legacy') &&
+          typeof options.removeCssInJs === 'function'
+        ) {
+          const code = options.removeCssInJs(stringSource(bundle.code))
+          bundle.code = code || bundle.code
+        }
       }
 
       await writeCache()
@@ -527,16 +546,11 @@ function getTargetNodeIndex(content) {
 
     const attrs = elem.attrs || {}
 
-    const hasLinkCss = (
-      elem.tag === 'link' &&
-      attrs.rel === 'stylesheet' &&
-      // todo
-      (attrs.href && (attrs.href as string).endsWith('.css'))
-    )
+    const hasLinkCss = (elem.tag === 'link' && attrs.rel === 'stylesheet')
 
     const hasModule = hasLinkCss ||
       (elem.tag === 'link' && attrs.rel === 'modulepreload') ||
-      (elem.tag === 'script' && attrs.type === 'module')
+      (elem.tag === 'script' && attrs.type === 'module' && attrs.src)
 
     if (hasModule) {
       index = i

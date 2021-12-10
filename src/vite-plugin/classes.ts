@@ -20,10 +20,10 @@ let idGenerator: Generator<string, void, unknown>
 export function minifyClassesHandle(css: string, _minify: MinifyClassnames, options: PluginOptions) {
   minify = minify || _minify
 
-  classGenerator = classGenerator || generateName(minify.generateNameFilters, minify.upperCase)
-  idGenerator = idGenerator || generateName(minify.generateNameFilters, minify.upperCase)
-
   requireCache()
+
+  classGenerator = classGenerator || generateName(minify.generateNameFilters, minify.upperCase, generateClassesCallback)
+  idGenerator = idGenerator || generateName(minify.generateNameFilters, minify.upperCase, generateIdCallback)
 
   const ast = postcssSafeParser(css)
 
@@ -51,6 +51,25 @@ export function minifyClassesHandle(css: string, _minify: MinifyClassnames, opti
   walkNodes(ast.nodes)
 
   return ast.toString()
+}
+
+let classes: string[]
+let ids: string[]
+
+function generateClassesCallback(name) {
+  if (!classes) {
+    return true
+  }
+
+  return classes.includes(name) ? false : true
+}
+
+function generateIdCallback(name) {
+  if (!ids) {
+    return true
+  }
+
+  return ids.includes(name) ? false : true
 }
 
 function selectorParser(selector: string) {
@@ -100,6 +119,13 @@ export async function writeCache() {
         }
       })
 
+      classesValues.clear()
+      idValues.clear()
+      cache.classes = {}
+      cache.ids = {}
+      classes.length = 0
+      ids.length = 0
+
       await fse.outputFile(minify.__cache_file__, `module.exports=${JSON.stringify(data)}`, 'utf8')
 
     } catch (e) {
@@ -109,6 +135,10 @@ export async function writeCache() {
 }
 
 function addClassesValues(value: string) {
+  if (minify.enableCache) {
+    classes = classes || Object.keys(cache.classes).map(k => cache.classes[k])
+  }
+
   if (!cache.classes[value]) {
     cache.classes[value] = classGenerator.next().value
   }
@@ -117,6 +147,7 @@ function addClassesValues(value: string) {
 
   if (minify.enableCache) {
     classesValues = classesValues || new Set()
+    v && !classes.includes(v) && classes.push(v)
     classesValues.add(value)
   }
 
@@ -124,6 +155,10 @@ function addClassesValues(value: string) {
 }
 
 function addIdValues(value: string) {
+  if (minify.enableCache) {
+    ids = ids || Object.keys(cache.ids).map(k => cache.ids[k])
+  }
+
   if (!cache.ids[value]) {
     cache.ids[value] = idGenerator.next().value
   }
@@ -132,6 +167,7 @@ function addIdValues(value: string) {
 
   if (minify.enableCache) {
     idValues = idValues || new Set()
+    v && !ids.includes(v) && ids.push(v)
     idValues.add(value)
   }
 
@@ -161,7 +197,13 @@ function requireCache() {
 function isFiltered(value: string, id?: boolean) {
   value = (id ? '#' : '.') + value
 
-  return minify.filters.some(reg => reg.test(value))
+  return minify.filters.some(reg => {
+    if (typeof reg === 'string') {
+      return reg === value
+    }
+
+    return reg.test(value)
+  })
 }
 
 function prefixValue(value) {

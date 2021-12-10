@@ -25,7 +25,7 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
     rtl: false,
     minifyHtml: true,
     devMinifyHtml: false,
-    minifyClassnames: false,
+    minifyClassnames: false
   }, _opts || {})
 
   options.pagesDirectory = options.pagesDirectory || 'pages'

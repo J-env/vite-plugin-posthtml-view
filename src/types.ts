@@ -1,5 +1,5 @@
 import type { Options as MinifyOptions } from 'html-minifier-terser'
-import type { PostHTML, Options as PostHtmlOptions } from 'posthtml'
+import type { Node as Tree, PostHTML, Options as PostHtmlOptions } from 'posthtml'
 
 type PostHTMLType = PostHTML<unknown, unknown>
 
@@ -77,6 +77,10 @@ export interface VitePluginOptions {
    * @default null
    */
   usePlugins: null | ((posthtml: PostHTMLType) => void)
+
+  generateUsePlugins?: (tree: Tree) => Tree
+
+  removeCssInJs?: (code: string) => string
 }
 
 export interface MinifyClassnames {
@@ -104,9 +108,9 @@ export interface MinifyClassnames {
 
   /**
    * .js-click, #js-dom
-   * @default [/^(\.|#)js-/]
+   * @default [/^(\.|#)js-/, 'vite-legacy-polyfill', 'vite-legacy-entry']
    */
-  filters: RegExp[]
+  filters: (RegExp | string)[]
 
   /**
    * @example ['x-transition']
