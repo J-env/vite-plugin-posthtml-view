@@ -7,6 +7,7 @@ import { encryptHtml, decryptHtml, htmlConversion } from '../utils/html'
 import { compilerViewPlugin } from '../compiler-view'
 import { requireMock, writeTemplate } from './dev'
 import { phpRenderToHtml } from './php'
+import { minifyHtml } from './html'
 
 type Handle = (
   config: ResolvedConfig,
@@ -137,6 +138,11 @@ export const transformHandle: Handle = (
       if (options.php) {
         // hash to php
         html = decryptHtml(html)
+
+        if (options.devMinifyHtml) {
+          html = await minifyHtml(html, options)
+        }
+
         html = htmlConversion(html)
 
         if (typeof options.php.devRender === 'function') {
@@ -169,6 +175,11 @@ export const transformHandle: Handle = (
         }
 
         return html || noContent
+
+      } else {
+        if (options.devMinifyHtml) {
+          html = await minifyHtml(html, options)
+        }
       }
     }
 

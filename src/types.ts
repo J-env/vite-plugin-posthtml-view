@@ -62,6 +62,11 @@ export interface VitePluginOptions {
   minifyHtml: MinifyOptions | boolean
 
   /**
+   * @default false
+   */
+  devMinifyHtml: boolean
+
+  /**
    * Only used in production environments
    * @default false
    */

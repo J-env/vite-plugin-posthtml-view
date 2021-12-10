@@ -4,30 +4,13 @@ import { createFilter } from '@rollup/pluginutils'
 // import shell from 'shelljs'
 import posthtml, { RawNode } from 'posthtml'
 import match from 'posthtml-match-helper'
-import { minify, Options as MinifyOptions } from 'html-minifier-terser'
 
 import type { PluginOptions, RtlOptions, MinifyClassnames } from '../types'
 import { decryptHtml, htmlConversion } from '../utils/html'
 import { placeholderToNoflip, cssjanus } from '../utils/rtl'
 import { toValidCSSIdentifier } from '../utils'
 import { minifyClassesHandle, joinValues, htmlFor, useTagId, writeCache } from './classes'
-
-const minifyHtml: MinifyOptions = {
-  collapseBooleanAttributes: true,
-  collapseWhitespace: true,
-  minifyCSS: true,
-  minifyJS: true,
-  minifyURLs: true,
-  removeAttributeQuotes: true,
-  removeComments: true,
-  html5: true,
-  keepClosingSlash: true,
-  removeEmptyAttributes: true,
-  removeRedundantAttributes: true,
-  removeScriptTypeAttributes: true,
-  removeStyleLinkTypeAttributes: true,
-  useShortDoctype: true
-}
+import { minifyHtml } from './html'
 
 const rtlMark = '[[rtl]]'
 const ltrMark = '[[ltr]]'
@@ -78,16 +61,6 @@ export function getRtlOptions(options: PluginOptions): RtlOptions | false {
 }
 
 export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | false): Plugin {
-  if (typeof options.minifyHtml === 'boolean') {
-    options.minifyHtml && (options.minifyHtml = minifyHtml)
-
-  } else {
-    options.minifyHtml = {
-      ...minifyHtml,
-      ...options.minifyHtml,
-    }
-  }
-
   const filter = createFilter(['**/*.html'])
 
   let config: ResolvedConfig
@@ -413,9 +386,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           }
 
           // 2 压缩
-          if (options.minifyHtml) {
-            source = await minify(source, options.minifyHtml as MinifyOptions)
-          }
+          source = await minifyHtml(source, options)
 
           // 3 转换成php
           if (options.php) {

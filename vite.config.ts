@@ -111,6 +111,7 @@ export default defineConfig(async (env) => {
         },
 
         minifyClassnames: true,
+        devMinifyHtml: true,
 
         js: {
           type: 'ts'

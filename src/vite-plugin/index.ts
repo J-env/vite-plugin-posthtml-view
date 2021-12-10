@@ -24,6 +24,7 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
     usePlugins: null,
     rtl: false,
     minifyHtml: true,
+    devMinifyHtml: false,
     minifyClassnames: false,
   }, _opts || {})
 
@@ -171,10 +172,24 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
           })
         )
 
-        // middlewares.use((req, res, next) => {
-        //   console.log(req.url, 'url')
-        //   next()
-        // })
+        // return () => {
+        //   if (server.config.command === 'serve') {
+        //     middlewares.use((req, res, next) => {
+        //       console.log([req.url])
+
+        //       // if (req.url && req.url.includes(virtualId)) {
+        //       //   const id = req.url.replace('/@id/', '')
+
+        //       //   if (chunkCache.get(id)) {
+        //       //     res.end(chunkCache.get(id))
+        //       //     return
+        //       //   }
+        //       // }
+
+        //       next()
+        //     })
+        //   }
+        // }
       },
 
       async transform(code, id) {
@@ -217,6 +232,8 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
             path: '*',
           })
         }
+
+        return []
       }
     }
   }
