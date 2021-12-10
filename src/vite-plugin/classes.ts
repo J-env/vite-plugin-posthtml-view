@@ -1,4 +1,5 @@
-import { Node, AnyNode } from 'postcss'
+import fse from 'fs-extra'
+import type { Node, AnyNode } from 'postcss'
 import postcssSafeParser from 'postcss-safe-parser'
 import postcssSelectorParser from 'postcss-selector-parser'
 
@@ -19,10 +20,10 @@ let idGenerator: Generator<string, void, unknown>
 export function minifyClassesHandle(css: string, _minify: MinifyClassnames, options: PluginOptions) {
   minify = minify || _minify
 
-  cache = cache || (minify.enableCache ? requireCache() : objCache)
-
   classGenerator = classGenerator || generateName(minify.generateNameFilters, minify.upperCase)
   idGenerator = idGenerator || generateName(minify.generateNameFilters, minify.upperCase)
+
+  requireCache()
 
   const ast = postcssSafeParser(css)
 
@@ -59,11 +60,10 @@ function selectorParser(selector: string) {
         return
       }
 
-      if (!cache.classes[node.value]) {
-        cache.classes[node.value] = classGenerator.next().value
-      }
-
-      node.setPropertyWithoutEscape('value', prefixValue(cache.classes[node.value]))
+      node.setPropertyWithoutEscape(
+        'value',
+        prefixValue(addClassesValues(node.value)) || node.value
+      )
     })
 
     selectorRoot.walkIds((node) => {
@@ -71,14 +71,91 @@ function selectorParser(selector: string) {
         return
       }
 
-      if (!cache.ids[node.value]) {
-        cache.ids[node.value] = idGenerator.next().value
-      }
-
-      node.value = prefixValue(cache.ids[node.value]) || node.value
+      node.value = prefixValue(addIdValues(node.value)) || node.value
     })
 
   }).processSync(selector)
+}
+
+let classesValues: Set<string>
+let idValues: Set<string>
+
+export async function writeCache() {
+  if (minify && minify.__cache_file__ && cache) {
+    try {
+      const data = {
+        classes: {},
+        ids: {}
+      }
+
+      classesValues.forEach((value) => {
+        if (cache.classes[value] != null) {
+          data.classes[value] = cache.classes[value]
+        }
+      })
+
+      idValues.forEach((value) => {
+        if (cache.ids[value] != null) {
+          data.ids[value] = cache.ids[value]
+        }
+      })
+
+      await fse.outputFile(minify.__cache_file__, `module.exports=${JSON.stringify(data)}`, 'utf8')
+
+    } catch (e) {
+
+    }
+  }
+}
+
+function addClassesValues(value: string) {
+  if (!cache.classes[value]) {
+    cache.classes[value] = classGenerator.next().value
+  }
+
+  const v = cache.classes[value]
+
+  if (minify.enableCache) {
+    classesValues = classesValues || new Set()
+    classesValues.add(value)
+  }
+
+  return v
+}
+
+function addIdValues(value: string) {
+  if (!cache.ids[value]) {
+    cache.ids[value] = idGenerator.next().value
+  }
+
+  const v = cache.ids[value]
+
+  if (minify.enableCache) {
+    idValues = idValues || new Set()
+    idValues.add(value)
+  }
+
+  return v
+}
+
+function requireCache() {
+  if (cache) {
+    return
+  }
+
+  let _cache
+
+  if (minify.__cache_file__) {
+    try {
+      const raw = require(minify.__cache_file__)
+
+      _cache = raw.__esModule ? raw.default : raw
+
+    } catch (e) {
+    }
+  }
+
+  cache = _cache || objCache
 }
 
 function isFiltered(value: string, id?: boolean) {
@@ -88,17 +165,17 @@ function isFiltered(value: string, id?: boolean) {
 }
 
 function prefixValue(value) {
+  if (!value) return value
+
   return minify.prefix + value
 }
 
 export function htmlFor(id: string) {
   if (!isFiltered(id, true)) {
-    if (!cache.ids[id]) {
-      cache.ids[id] = idGenerator.next().value
-    }
+    const v = addIdValues(id)
 
-    if (cache.ids[id]) {
-      return prefixValue(cache.ids[id])
+    if (v) {
+      return prefixValue(v)
     }
   }
 }
@@ -127,11 +204,9 @@ export function joinValues(values: string, id?: boolean) {
         return prefixValue(cache.classes[val]) || val
       }
 
-      if (!cache.ids[val]) {
-        cache.ids[val] = idGenerator.next().value
-      }
+      const idv = addIdValues(val)
 
-      return prefixValue(cache.ids[val]) || val
+      return prefixValue(idv) || val
     })
     .filter(Boolean)
     .join(' ')
@@ -145,16 +220,4 @@ interface ParserType<Child extends Node = AnyNode> {
 interface Cache {
   classes: Record<string, string | void>
   ids: Record<string, string | void>
-}
-
-function requireCache(): Cache {
-  if (cache) return cache
-
-  try {
-    // @todo
-    return require('.json')
-
-  } catch (e) {
-    return objCache
-  }
 }

@@ -113,6 +113,11 @@ export interface MinifyClassnames {
    * @default ''
    */
   prefix: string
+
+  /**
+   * @private
+   */
+  __cache_file__: string
 }
 
 export type SlugCallback = (className: string) => string

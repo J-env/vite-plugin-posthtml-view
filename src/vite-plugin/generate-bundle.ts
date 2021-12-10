@@ -1,4 +1,5 @@
-import type { Plugin } from 'vite'
+import path from 'path'
+import type { Plugin, ResolvedConfig } from 'vite'
 import { createFilter } from '@rollup/pluginutils'
 // import shell from 'shelljs'
 import posthtml, { RawNode } from 'posthtml'
@@ -9,7 +10,7 @@ import type { PluginOptions, RtlOptions, MinifyClassnames } from '../types'
 import { decryptHtml, htmlConversion } from '../utils/html'
 import { placeholderToNoflip, cssjanus } from '../utils/rtl'
 import { toValidCSSIdentifier } from '../utils'
-import { minifyClassesHandle, joinValues, htmlFor, useTagId } from './classes'
+import { minifyClassesHandle, joinValues, htmlFor, useTagId, writeCache } from './classes'
 
 const minifyHtml: MinifyOptions = {
   collapseBooleanAttributes: true,
@@ -59,7 +60,8 @@ const defaultMinifyOptions: MinifyClassnames = {
   upperCase: true,
   filters: [/^(\.|#)js-/],
   attributes: [],
-  prefix: ''
+  prefix: '',
+  __cache_file__: ''
 }
 
 let minifyOptions: MinifyClassnames
@@ -88,7 +90,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
 
   const filter = createFilter(['**/*.html'])
 
-  // let config: ResolvedConfig
+  let config: ResolvedConfig
 
   const { type, syntax } = rtl ? rtl : defaultRtlOptions
 
@@ -350,9 +352,9 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
     enforce: 'post',
     apply: 'build',
 
-    // configResolved(_config) {
-    //   config = _config
-    // },
+    configResolved(_config) {
+      config = _config
+    },
 
     async generateBundle(gb, bundles) {
       const minifyClassnames = options.minifyClassnames
@@ -363,6 +365,13 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           : ({ ...defaultMinifyOptions, ...minifyClassnames })
 
         minifyOptions.prefix = minifyOptions.prefix && toValidCSSIdentifier(minifyOptions.prefix)
+
+        if (minifyOptions.enableCache) {
+          minifyOptions.__cache_file__ = path.resolve(config.root, path.join(options.cacheDirectory, 'css', '_css.js'))
+
+        } else {
+          minifyOptions.__cache_file__ = ''
+        }
       }
 
       for (const bundle of Object.values(bundles)) {
@@ -467,6 +476,8 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           }
         }
       }
+
+      await writeCache()
     },
 
     // closeBundle() {

@@ -41,7 +41,7 @@ export async function requireMock(tspath: string, hot: boolean = true) {
   return mock || {}
 }
 
-const hashCache = new Map<string, string>()
+const htmlCache = new Map<string, string>()
 
 export async function writeTemplate(
   html: string,
@@ -51,8 +51,8 @@ export async function writeTemplate(
 ) {
   const filename = path.join(cacheDirectory, '.php-dev', file)
 
-  if (hashCache.get(file) !== html) {
-    hashCache.set(file, html)
+  if (htmlCache.get(file) !== html) {
+    htmlCache.set(file, html)
 
     await fse.outputFile(path.resolve(root, filename), html, 'utf8')
   }

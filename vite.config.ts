@@ -3,9 +3,9 @@ import fs from 'fs'
 import { defineConfig } from 'vite'
 import scss from 'sass'
 import commonjsExternals from 'vite-plugin-commonjs-externals'
+import windiCSS from 'vite-plugin-windicss'
 
 import { dependencies } from './package.json'
-
 import { vitePluginPosthtmlView } from './src'
 
 export default defineConfig(async (env) => {
@@ -88,6 +88,8 @@ export default defineConfig(async (env) => {
       preprocessorOptions
     },
     plugins: [
+      windiCSS(),
+
       vitePluginPosthtmlView({
         includes: [],
         ignore: ['components'],
