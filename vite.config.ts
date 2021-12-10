@@ -2,7 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import { defineConfig } from 'vite'
 import scss from 'sass'
-import commonjsExternals from 'vite-plugin-commonjs-externals'
+// import commonjsExternals from 'vite-plugin-commonjs-externals'
 import windiCSS from 'vite-plugin-windicss'
 
 import { dependencies } from './package.json'
@@ -12,9 +12,9 @@ export default defineConfig(async (env) => {
   if (env.command === 'build' && env.mode !== 'example') {
     return {
       plugins: [
-        commonjsExternals({
-          externals: ['path', 'fs', 'crypto']
-        }),
+        // commonjsExternals({
+        //   externals: ['path', 'fs', 'crypto']
+        // }),
         {
           name: '_project:generateBundle',
           enforce: 'post',
@@ -60,7 +60,13 @@ export default defineConfig(async (env) => {
         },
         rollupOptions: {
           // 确保外部化处理那些你不想打包进库的依赖
-          external: Object.keys({ ...dependencies }),
+          external: [
+            'path',
+            'fs',
+            'crypto',
+            /node_modules/,
+            ...Object.keys({ ...dependencies })
+          ],
         }
       }
     }
