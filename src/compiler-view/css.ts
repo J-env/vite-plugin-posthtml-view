@@ -5,7 +5,7 @@ import postcssSelectorParser from 'postcss-selector-parser'
 import { slugify } from '../utils/slugify'
 import { toValidCSSIdentifier } from '../utils'
 
-import { OptionsUtils } from './utils'
+import { OptionsUtils, isDynamicCss } from './utils'
 
 interface ParserType<Child extends Node = AnyNode> {
   nodes: Child[]
@@ -16,22 +16,23 @@ export interface ScopedClasses {
   tags: Record<string, boolean>
 }
 
-function hashCleanHandle(css: string): string {
-  return css
-}
+const animationNameReg = /^(-\w+-)?animation-name$/
+const animationReg = /^(-\w+-)?animation$/
 
 export function postcssScopedParser(
   css: string,
   resolveId: string,
   options: OptionsUtils,
   from: string,
-  _hashCleanHandle?: (css: string) => string
+  start_mark: string,
+  end_mark: string
 ) {
-  _hashCleanHandle = _hashCleanHandle || hashCleanHandle
+  const _hashCleanHandle = (css: string) => {
+    return css.replace(start_mark, '').replace(end_mark, '')
+  }
 
   const isProd = options.mode === 'production'
   const hash = slugify(`scoped-${resolveId}:` + (isProd ? _hashCleanHandle(css || '') : ''))
-
   const scopedHash = toValidCSSIdentifier((options.styled.prefix || '') + hash)
 
   const ast = postcssSafeParser(css, {
@@ -42,6 +43,9 @@ export function postcssScopedParser(
     classNames: [],
     tags: {}
   }
+
+  const keyframes = Object.create(null)
+  let isWalkDecls = false
 
   function walkNodes(nodes: ParserType['nodes']) {
     nodes.forEach((rule) => {
@@ -54,11 +58,33 @@ export function postcssScopedParser(
       } else {
         switch (rule.type) {
           case 'rule':
+            if ([start_mark, end_mark].includes(rule.selector + '{}')) {
+              return
+            }
+
             clearInvalidValues(rule.nodes)
 
             rule.selector = replaceGlobalPseudo(
               scopedParser(rule.selector, scopedHash, scopedClasses)
             )
+            break;
+
+          case 'atrule':
+            if (/-?keyframes$/.test(rule.name)) {
+              const hasGlobal = rule.params.startsWith(':global')
+
+              if (hasGlobal) {
+                rule.params = replaceGlobalPseudo(rule.params)
+
+              } else {
+                const keyframe_hash = `_${hash}`
+
+                if (!rule.params.endsWith(keyframe_hash)) {
+                  isWalkDecls = true
+                  keyframes[rule.params] = rule.params = rule.params + keyframe_hash
+                }
+              }
+            }
             break;
 
           default:
@@ -69,6 +95,37 @@ export function postcssScopedParser(
   }
 
   walkNodes(ast.nodes)
+
+  if (isWalkDecls) {
+    ast.walkDecls((decl) => {
+      // @see: vue-sfc-scoped
+      if (animationNameReg.test(decl.prop)) {
+        decl.value = decl.value
+          .split(',')
+          .map(v => keyframes[v.trim()] || v.trim())
+          .join(',')
+      }
+
+      if (animationReg.test(decl.prop)) {
+        decl.value = decl.value
+          .split(',')
+          .map(v => {
+            const vals = v.trim().split(/\s+/)
+
+            const i = vals.findIndex(val => keyframes[val])
+
+            if (i !== -1) {
+              vals.splice(i, 1, keyframes[vals[i]])
+              return vals.join(' ')
+
+            } else {
+              return v
+            }
+          })
+          .join(',')
+      }
+    })
+  }
 
   return {
     scopedHash,
@@ -88,18 +145,24 @@ function scopedParser(
         const isGlobal = pseudoIsGlobal(node.parent) || pseudoIsGlobal(node.parent && node.parent.parent)
 
         if (!isGlobal) {
-          if (
-            node.type === 'class' &&
-            !scopedClasses.classNames.includes(node.value)
-          ) {
-            scopedClasses.classNames.push(node.value)
+          let value = node.value
+
+          if (node.type === 'class') {
+            // Dynamic selector
+            if (isDynamicCss(value)) {
+              value = value.replace(/({|%|:|})/g, '\\$1')
+            }
+
+            if (!scopedClasses.classNames.includes(value)) {
+              scopedClasses.classNames.push(value)
+            }
           }
 
           if (node.type === 'tag') {
-            scopedClasses.tags[node.value] = true
+            scopedClasses.tags[value] = true
           }
 
-          node.setPropertyWithoutEscape('value', `${node.value}.${scopedHash}`)
+          node.setPropertyWithoutEscape('value', `${value}.${scopedHash}`)
         }
       }
     })

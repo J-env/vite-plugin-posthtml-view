@@ -619,7 +619,8 @@ function parseStyleAndScript(
         component.resolveId,
         options,
         component.src,
-        (css) => css.replace(start_mark, '').replace(end_mark, '')
+        start_mark,
+        end_mark
       )
 
       scoped_css = ast.css

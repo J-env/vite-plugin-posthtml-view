@@ -11,15 +11,18 @@
 
     <my-button>button click</my-button>
 
-    <hr id="vite-legacy-entry">
+    <hr>
 
     <view:component src="./_demo/register-components.html">
       <template slot="bottom">
-        <div>this is bottom</div>
+        <div class="test">this is bottom</div>
       </template>
 
       <div>this is default</div>
     </view:component>
+
+    <input id="input1" type="text">
+    <label for="input1"></label>
   </template>
 
   <script type="module" src="/example/index.ts"></script>

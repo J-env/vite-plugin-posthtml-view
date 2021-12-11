@@ -50,7 +50,7 @@ export function getTag(src: string) {
 }
 
 function dynamicTest(css: string) {
-  return !!(css && /\\{\\%(\\:|\\#)(.*?)\\%\\}/gs.test(css))
+  return !!(css && /\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs.test(css))
 }
 
 export function isDynamicCss(css: string): boolean {

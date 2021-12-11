@@ -1,4 +1,4 @@
-<div class="style-js">style js</div>
+<div class="style-js id-<?= $id ?>">style js</div>
 
 <!-- <script src="./index.ts"></script> -->
 
@@ -8,22 +8,41 @@
 
 <!-- <style src="./index.scss"></style> -->
 
-<style to="file">
+<!-- <style to="file">
   .style-js {
     padding-left: 20px;
     font-size: 40px;
     color: red;
   }
-</style>
+</style> -->
+
+<!-- <style>
+  .style-js {
+    background: <?= $color ?>;
+  }
+</style> -->
 
 <style>
-  .style-js {
-    background: <?= $hello ?>;
+  .id-<?= $id ?> {
+    color: #000;
   }
 </style>
 
-<style>
+<!-- <style>
   .style-js {
     border: 1px solid #000;
+    animation: both 0.3s both;
   }
-</style>
+
+  @keyframes both {
+    0% {
+      opacity: 0;
+      transform: translateY(2000px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style> -->

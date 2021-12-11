@@ -5,6 +5,7 @@ import postcssSelectorParser from 'postcss-selector-parser'
 
 import type { PluginOptions, MinifyClassnames } from '../types'
 import { generateName, toValidCSSIdentifier } from '../utils'
+import { isDynamicCss } from '../compiler-view/utils'
 
 const objCache = {
   classes: {},
@@ -209,6 +210,10 @@ function requireCache() {
 }
 
 function isFiltered(value: string, id?: boolean) {
+  if (isDynamicCss(value)) {
+    return true
+  }
+
   value = (id ? '#' : '.') + value
 
   return minify.filters.some(reg => {
@@ -227,22 +232,26 @@ function prefixValue(value) {
 }
 
 export function htmlFor(id: string) {
-  if (!isFiltered(id, true)) {
-    const v = addIdValues(id)
+  if (isFiltered(id, true)) {
+    return
+  }
 
-    if (v) {
-      return prefixValue(v)
-    }
+  const v = addIdValues(id)
+
+  if (v) {
+    return prefixValue(v)
   }
 }
 
 export function useTagId(href: string) {
   href = href.slice(1)
 
-  if (!isFiltered(href, true)) {
-    if (cache.ids[href]) {
-      return '#' + prefixValue(cache.ids[href])
-    }
+  if (isFiltered(href, true)) {
+    return
+  }
+
+  if (cache.ids[href]) {
+    return '#' + prefixValue(cache.ids[href])
   }
 }
 
@@ -256,13 +265,9 @@ export function joinValues(values: string, id?: boolean) {
         return val
       }
 
-      if (!id) {
-        return prefixValue(cache.classes[val]) || val
-      }
+      const v = !id ? addClassesValues(val) : addIdValues(val)
 
-      const idv = addIdValues(val)
-
-      return prefixValue(idv) || val
+      return prefixValue(v) || val
     })
     .filter(Boolean)
     .join(' ')

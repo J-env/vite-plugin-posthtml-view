@@ -188,23 +188,22 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                   const tagId = useTagId(node.attrs[item].replace(/url\((.*?)\)/g, '$1'))
 
                   if (tagId) {
-                    node.attrs[item] = `url(#${tagId})`
+                    node.attrs[item] = `url(${tagId})`
                   }
                 }
               })
-            }
 
-            // svg
-            if (
-              node.tag === 'use' &&
-              node.attrs &&
-              (node.attrs.href || node.attrs['xlink:href'])
-            ) {
-              const useAttr = node.attrs.href ? 'href' : 'xlink:href'
-              const tagId = useTagId(node.attrs[useAttr] || '')
+              // svg
+              if (
+                node.tag === 'use' &&
+                (node.attrs.href || node.attrs['xlink:href'])
+              ) {
+                const useAttr = node.attrs.href ? 'href' : 'xlink:href'
+                const tagId = useTagId(node.attrs[useAttr] || '')
 
-              if (tagId) {
-                node.attrs[useAttr] = tagId
+                if (tagId) {
+                  node.attrs[useAttr] = tagId
+                }
               }
             }
 
@@ -352,7 +351,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
         minifyOptions.filters = [...minifyOptions.filters, '#vite-legacy-polyfill', '#vite-legacy-entry']
 
         if (minifyOptions.enableCache) {
-          minifyOptions.__cache_file__ = path.resolve(config.root, path.join(options.cacheDirectory, 'css', '_css.js'))
+          minifyOptions.__cache_file__ = path.join(config.root, path.join(options.cacheDirectory, 'css', '_css.js'))
 
         } else {
           minifyOptions.__cache_file__ = ''
