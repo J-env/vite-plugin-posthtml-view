@@ -9,7 +9,7 @@ import type { PluginOptions, RtlOptions, MinifyClassnames } from '../types'
 import { decryptHtml, htmlConversion } from '../utils/html'
 import { placeholderToNoflip, cssjanus } from '../utils/rtl'
 import { toValidCSSIdentifier } from '../utils'
-import { minifyClassesHandle, joinValues, htmlFor, useTagId, writeCache } from './classes'
+import { createGenerator, minifyClassesHandle, joinValues, htmlFor, useTagId, writeCache } from './classes'
 import { minifyHtml } from './html'
 
 const rtlMark = '[[rtl]]'
@@ -137,7 +137,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
             const content = [].concat((style.content as []) || '').join('').trim()
 
             if (content) {
-              style.content = [minifyClassesHandle(content, minifyOptions, options)]
+              style.content = [minifyClassesHandle(content)]
             }
 
             return style
@@ -356,6 +356,8 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
         } else {
           minifyOptions.__cache_file__ = ''
         }
+
+        createGenerator(minifyOptions)
       }
 
       for (const bundle of Object.values(bundles)) {
@@ -364,7 +366,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           let source = stringSource(bundle.source)
 
           if (minifyOptions) {
-            source = minifyClassesHandle(source, minifyOptions, options)
+            source = minifyClassesHandle(source)
           }
 
           // ltr

@@ -53,6 +53,10 @@ function dynamicTest(css: string) {
   return !!(css && /\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs.test(css))
 }
 
+export function isDynamicSelector(s: string): boolean {
+  return dynamicTest(s)
+}
+
 export function isDynamicCss(css: string): boolean {
   css = css && css.replace(/\/\*(.*?)\*\//gs, (s) => {
     if (dynamicTest(s)) {

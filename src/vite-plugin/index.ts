@@ -143,16 +143,6 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
   }
 
   const posthtmlViewDev: () => Plugin = () => {
-    // function mapChunk(cache: Map<string, string>) {
-    //   var arr: string[] = []
-
-    //   cache.forEach((value, key) => {
-    //     arr.push(key)
-    //   })
-
-    //   return arr
-    // }
-
     return {
       name: 'view:posthtml-view-dev',
       enforce: 'pre',
@@ -206,24 +196,6 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
       },
 
       async handleHotUpdate({ file, server }) {
-        // if (file.includes('.html') && (chunkCache.size > 0)) {
-        //   const timestamp = Date.now()
-
-        //   server.ws.send({
-        //     type: 'update',
-        //     updates: mapChunk(chunkCache).map((url) => {
-        //       url = '/@id/' + url
-
-        //       return {
-        //         type: url.endsWith('css') ? 'css-update' : 'js-update',
-        //         path: url,
-        //         acceptedPath: url,
-        //         timestamp: timestamp
-        //       }
-        //     })
-        //   })
-        // }
-
         if (
           file.includes('/' + options.mocksDirectory) || file.includes('.html')
         ) {

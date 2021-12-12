@@ -5,7 +5,7 @@ import postcssSelectorParser from 'postcss-selector-parser'
 import { slugify } from '../utils/slugify'
 import { toValidCSSIdentifier } from '../utils'
 
-import { OptionsUtils, isDynamicCss } from './utils'
+import { OptionsUtils, isDynamicSelector } from './utils'
 
 interface ParserType<Child extends Node = AnyNode> {
   nodes: Child[]
@@ -149,7 +149,7 @@ function scopedParser(
 
           if (node.type === 'class') {
             // Dynamic selector
-            if (isDynamicCss(value)) {
+            if (isDynamicSelector(value)) {
               value = value.replace(/({|%|:|})/g, '\\$1')
             }
 

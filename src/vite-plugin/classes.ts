@@ -3,9 +3,9 @@ import type { Node, AnyNode } from 'postcss'
 import postcssSafeParser from 'postcss-safe-parser'
 import postcssSelectorParser from 'postcss-selector-parser'
 
-import type { PluginOptions, MinifyClassnames } from '../types'
+import type { MinifyClassnames } from '../types'
 import { generateName, toValidCSSIdentifier } from '../utils'
-import { isDynamicCss } from '../compiler-view/utils'
+import { isDynamicSelector } from '../compiler-view/utils'
 
 const objCache = {
   classes: {},
@@ -18,14 +18,16 @@ let minify: MinifyClassnames
 let classGenerator: Generator<string, void, unknown>
 let idGenerator: Generator<string, void, unknown>
 
-export function minifyClassesHandle(css: string, _minify: MinifyClassnames, options: PluginOptions) {
+export function createGenerator(_minify: MinifyClassnames) {
   minify = minify || _minify
 
   requireCache()
 
   classGenerator = classGenerator || generateName(minify.generateNameFilters, minify.upperCase, generateClassesCallback)
   idGenerator = idGenerator || generateName(minify.generateNameFilters, minify.upperCase, generateIdCallback)
+}
 
+export function minifyClassesHandle(css: string) {
   const ast = postcssSafeParser(css)
 
   function walkNodes(nodes: ParserType['nodes']) {
@@ -76,13 +78,44 @@ function generateIdCallback(name) {
 function selectorParser(selector: string) {
   return postcssSelectorParser((selectorRoot) => {
     selectorRoot.walkClasses((node) => {
-      if (isFiltered(node.value)) {
+      if (isFiltered(node.value, false, false)) {
+        return
+      }
+
+      let value = node.value
+      let hasDynamic = false
+
+      const values = value.replace(/\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs, (s) => {
+        hasDynamic = true
+        return ` ${s} `
+      })
+
+      if (hasDynamic) {
+        value = values
+          .split(/\s+/)
+          .map((val) => {
+            if (!val) return ''
+
+            if (isFiltered(val)) {
+              return val
+            }
+
+            const v = addClassesValues(val)
+
+            return prefixValue(v) || val
+          })
+          .filter(Boolean)
+          .join('')
+          .trim()
+          .replace(/({|%|:|})/g, '\\$1')
+
+        node.setPropertyWithoutEscape('value', prefixValue(value) || value)
         return
       }
 
       node.setPropertyWithoutEscape(
         'value',
-        prefixValue(addClassesValues(node.value)) || node.value
+        prefixValue(addClassesValues(value)) || value
       )
     })
 
@@ -209,8 +242,8 @@ function requireCache() {
   cache = _cache || objCache
 }
 
-function isFiltered(value: string, id?: boolean) {
-  if (isDynamicCss(value)) {
+function isFiltered(value: string, id?: boolean, check?: boolean) {
+  if (check !== false && isDynamicSelector(value)) {
     return true
   }
 
@@ -258,9 +291,15 @@ export function useTagId(href: string) {
 export function joinValues(values: string, id?: boolean) {
   if (!values) return values
 
-  return values
+  if (!id) {
+    values = values.replace(/\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs, (s) => ` ${s} `)
+  }
+
+  values = values
     .split(/\s+/)
     .map((val) => {
+      if (!val) return ''
+
       if (isFiltered(val, id)) {
         return val
       }
@@ -272,6 +311,17 @@ export function joinValues(values: string, id?: boolean) {
     .filter(Boolean)
     .join(' ')
     .trim()
+
+  if (!id) {
+    values = values
+      .replace(/\\?%\\?}(.*?)\\?{\\?%/gs, (s, a) => {
+        if (!a) return s
+        return s.replace(a, ` ${a.trim()} `)
+      })
+      .replace(/\s+(\\?{\\?%)/g, '$1')
+  }
+
+  return values
 }
 
 interface ParserType<Child extends Node = AnyNode> {

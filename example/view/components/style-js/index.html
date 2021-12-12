@@ -1,5 +1,12 @@
 <div class="style-js id-<?= $id ?>">style js</div>
 
+<div class="dynamic <?php if($id==1001): ?>dynamic-selector<?php endif; ?>">dynamic selector</div>
+<div class="dynamic<?php if($id==1001): ?> dynamic-selector<?php endif; ?>">dynamic selector</div>
+<div class="dynamic <?php if($id==100): ?>dynamic-selector<?php endif; ?>">dynamic selector</div>
+<div
+  class="dynamic<?php if($id==100): ?> dynamic-selector<?php endif; ?> ooo<?php if($id==100): ?> dynamic-selector2<?php endif; ?>">
+  dynamic selector</div>
+
 <!-- <script src="./index.ts"></script> -->
 
 <!-- <script>
@@ -25,6 +32,15 @@
 <style>
   .id-<?= $id ?> {
     color: #000;
+  }
+
+  .dynamic {
+    padding: 10px;
+    background: aquamarine;
+  }
+
+  .dynamic-selector {
+    font-size: 30px;
   }
 </style>
 
