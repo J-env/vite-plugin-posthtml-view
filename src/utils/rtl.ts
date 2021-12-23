@@ -4,6 +4,10 @@ import type { CssjanusOptions } from '../types'
 
 const cache = new Map<string, string>()
 
+const commentReg = /\/\*(.*?)\*\//gs
+const placeholderReg = /--noflip-rtl-placeholder-\d+:\s*1;?/g
+const cssBlockReg = /{(.*?)}/gs
+
 export function cssjanus(_css: string, options?: CssjanusOptions): string {
   const cache_css = cache.get(_css)
 
@@ -19,7 +23,7 @@ export function cssjanus(_css: string, options?: CssjanusOptions): string {
     ...options
   })
 
-  css = css.replace(/\/\*(.*?)\*\//gs, '')
+  css = css.replace(commentReg, '')
 
   cache.set(_css, css)
 
@@ -35,10 +39,10 @@ export function cssjanus(_css: string, options?: CssjanusOptions): string {
 // }                                        }
 // `
 export function noflipToPlaceholder(css: string): string {
-  return css.replace(/{(.*?)}/gs, (s) => {
+  return css.replace(cssBlockReg, (s) => {
     let i = -1
 
-    return s.replace(/\/\*(.*?)\*\//gs, (noflip) => {
+    return s.replace(commentReg, (noflip) => {
       if (noflip.includes('@noflip')) {
         i = i + 1
         return `--noflip-rtl-placeholder-${i}:1;`
@@ -50,5 +54,5 @@ export function noflipToPlaceholder(css: string): string {
 }
 
 export function placeholderToNoflip(css: string, replaceValue?: string): string {
-  return css.replace(/--noflip-rtl-placeholder-\d+:\s*1;?/gs, replaceValue === '' ? replaceValue : '/* @noflip */')
+  return css.replace(placeholderReg, replaceValue === '' ? replaceValue : '/* @noflip */')
 }

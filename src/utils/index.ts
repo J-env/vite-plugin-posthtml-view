@@ -10,14 +10,25 @@ export function getContentHash(content: string, start?: number, end?: number): s
   return hash.slice(start || 0, end || 8)
 }
 
-export function toValidCSSIdentifier(s: string) {
+export const validCSSReg = /[^-_a-z0-9\u00A0-\uFFFF]/gi
+export const startsWithNumberReg = /^\d/
+
+export function toValidCSSIdentifier(s: string, l?: string) {
   if (!s) return s
 
-  return s.replace(/[^-_a-z0-9\u00A0-\uFFFF]/gi, '_').replace(/^\d/, '_')
+  return s.replace(validCSSReg, l || '_').replace(startsWithNumberReg, l || '_')
 }
 
-function _callback(name) {
-  return true
+export const externalRE = /^(https?:)?\/\//
+export const isExternalUrl = (url: string): boolean => externalRE.test(url)
+
+export const dataUrlRE = /^\s*data:/i
+export const isDataUrl = (url: string): boolean => dataUrlRE.test(url)
+
+const withoutEscapeReg = /({|%|:|})/g
+
+export function withoutEscape(val: string) {
+  return val.replace(withoutEscapeReg, '\\$1')
 }
 
 /**
@@ -67,4 +78,8 @@ export function* generateName(
     i++
     num = i
   }
+}
+
+function _callback(name) {
+  return true
 }

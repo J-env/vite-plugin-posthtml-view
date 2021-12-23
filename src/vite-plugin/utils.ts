@@ -12,8 +12,12 @@ interface EntriesItem {
   route: string
 }
 
+const cssReg = /\.(css|scss|less|sass|styl|stylus|pcss|postcss)$/
+
 export function isCssRequest(id: string) {
-  return /\.(css|scss|less|sass|styl|stylus|pcss|postcss)$/.test(id)
+  const bool = cssReg.test(id)
+  cssReg.lastIndex = 0
+  return bool
 }
 
 export function getConfig(config: UserConfig, options: Options) {

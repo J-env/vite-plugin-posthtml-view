@@ -1,9 +1,9 @@
-import { Node, AnyNode } from 'postcss'
+import { Node, AnyNode, PluginCreator } from 'postcss'
 import postcssSafeParser from 'postcss-safe-parser'
 import postcssSelectorParser from 'postcss-selector-parser'
 
+import { toValidCSSIdentifier, withoutEscape, isExternalUrl, isDataUrl } from '../utils'
 import { slugify } from '../utils/slugify'
-import { toValidCSSIdentifier } from '../utils'
 
 import { OptionsUtils, isDynamicSelector } from './utils'
 
@@ -15,6 +15,8 @@ export interface ScopedClasses {
   classNames: string[]
   tags: Record<string, boolean>
 }
+
+type CssUrlReplacer = (url: string, importer?: string) => string | Promise<string>
 
 const animationNameReg = /^(-\w+-)?animation-name$/
 const animationReg = /^(-\w+-)?animation$/
@@ -134,6 +136,147 @@ export function postcssScopedParser(
   }
 }
 
+// @see vite plugins
+export const cssUrlRE = /(?<=^|[^\w\-\u0080-\uffff])url\(\s*('[^']+'|"[^"]+"|[^'")]+)\s*\)/
+
+export const cssImageSetRE = /image-set\(([^)]+)\)/
+
+export const urlRewritePostcssPlugin: PluginCreator<{
+  replacer: CssUrlReplacer
+}> = (opts) => {
+
+  if (!opts) {
+    return {
+      postcssPlugin: 'postcss-url-rewrite',
+    }
+  }
+
+  return {
+    postcssPlugin: 'postcss-url-rewrite',
+    Once(root) {
+      const promises: Promise<void>[] = []
+
+      root.walkDecls((decl) => {
+        const isCssUrl = cssUrlRE.test(decl.value)
+        const isCssImageSet = cssImageSetRE.test(decl.value)
+
+        if (isCssUrl || isCssImageSet) {
+          const replacerForDecl = (rawUrl: string) => {
+            const importer = decl.source?.input.file
+            return opts.replacer(rawUrl, importer)
+          }
+
+          const rewriterToUse = isCssUrl ? rewriteCssUrls : rewriteCssImageSet
+
+          promises.push(
+            rewriterToUse(decl.value, replacerForDecl)
+              .then((url) => {
+                decl.value = url
+              })
+          )
+        }
+      })
+
+      if (promises.length) {
+        return Promise.all(promises) as any
+      }
+    }
+  }
+}
+
+urlRewritePostcssPlugin.postcss = true
+
+function rewriteCssUrls(css: string, replacer: CssUrlReplacer): Promise<string> {
+  return asyncReplace(css, cssUrlRE, async (match) => {
+    const [matched, rawUrl] = match
+    return await doUrlReplace(rawUrl, matched, replacer)
+  })
+}
+
+function rewriteCssImageSet(css: string, replacer: CssUrlReplacer): Promise<string> {
+  return asyncReplace(css, cssImageSetRE, async (match) => {
+    const [matched, rawUrl] = match
+    const url = await processSrcSet(rawUrl, ({ url }) => doUrlReplace(url, matched, replacer))
+
+    return `image-set(${url})`
+  })
+}
+
+export async function asyncReplace(
+  input: string,
+  re: RegExp,
+  replacer: (match: RegExpExecArray) => string | Promise<string>
+): Promise<string> {
+  let match: RegExpExecArray | null
+  let remaining = input
+  let rewritten = ''
+
+  while ((match = re.exec(remaining))) {
+    rewritten += remaining.slice(0, match.index)
+    rewritten += await replacer(match)
+    remaining = remaining.slice(match.index + match[0].length)
+  }
+
+  rewritten += remaining
+
+  return rewritten
+}
+
+async function doUrlReplace(rawUrl: string, matched: string, replacer: CssUrlReplacer) {
+  let wrap = ''
+  const first = rawUrl[0]
+
+  if (first === `"` || first === `'`) {
+    wrap = first
+    rawUrl = rawUrl.slice(1, -1)
+  }
+
+  if (isExternalUrl(rawUrl) || isDataUrl(rawUrl) || rawUrl.startsWith('#')) {
+    return matched
+  }
+
+  return `url(${wrap}${await replacer(rawUrl)}${wrap})`
+}
+
+interface ImageCandidate {
+  url: string
+  descriptor: string
+}
+
+const escapedSpaceCharacters = /( |\\t|\\n|\\f|\\r)+/g
+
+export async function processSrcSet(
+  srcs: string,
+  replacer: (arg: ImageCandidate) => Promise<string>
+): Promise<string> {
+  const imageCandidates: ImageCandidate[] = srcs
+    .split(',')
+    .map((s) => {
+      const [url, descriptor] = s
+        .replace(escapedSpaceCharacters, ' ')
+        .trim()
+        .split(' ', 2)
+
+      return { url, descriptor }
+    })
+    .filter(({ url }) => !!url)
+
+  const ret = await Promise.all(
+    imageCandidates.map(async ({ url, descriptor }) => {
+      return {
+        url: await replacer({ url, descriptor }),
+        descriptor
+      }
+    })
+  )
+
+  return ret.reduce((prev, { url, descriptor }, index) => {
+    descriptor = descriptor || ''
+
+    return (prev += url + ` ${descriptor}${index === ret.length - 1 ? '' : ', '}`)
+  }, '')
+}
+
 function scopedParser(
   selector: string,
   scopedHash: string,
@@ -150,7 +293,7 @@ function scopedParser(
           if (node.type === 'class') {
             // Dynamic selector
             if (isDynamicSelector(value)) {
-              value = value.replace(/({|%|:|})/g, '\\$1')
+              value = withoutEscape(value)
             }
 
             if (!scopedClasses.classNames.includes(value)) {
@@ -183,6 +326,8 @@ function pseudoIsGlobal(node) {
   return !!(node && node.type === 'pseudo' && node.value === ':global')
 }
 
+const globalReg = /:global\((.*?)\)/gs
+
 function replaceGlobalPseudo(str: string) {
-  return str.replace(/:global\((.*?)\)/gs, '$1')
+  return str.replace(globalReg, '$1')
 }

@@ -29,6 +29,16 @@ export function compilerViewPlugin(_options: Partial<Options>) {
     ...options.js
   }
 
+  options.assets = {
+    ...options.assets
+  }
+
+  options.assets.attributes = [
+    'data-src',
+    'data-img',
+    ...(options.assets.attributes || [])
+  ]
+
   options.styled = {
     type: 'scoped',
     to: 'head',

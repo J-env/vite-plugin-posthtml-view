@@ -1,5 +1,7 @@
 import type { Options, Components, RtlOptions } from '../types'
 
+import { toValidCSSIdentifier } from '../utils'
+
 /**
  * @private
  */
@@ -46,19 +48,27 @@ export function getTag(src: string) {
     .split('/')
     .map(item => hyphenate(item)).filter(Boolean)
 
-  return tag.join('-').replace(/[^-_a-z0-9\u00A0-\uFFFF]/gi, '-').replace(/^\d/, '-')
+  return toValidCSSIdentifier(tag.join('-'), '-')
 }
 
-function dynamicTest(css: string) {
-  return !!(css && /\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs.test(css))
+export const dynamicReg = /\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs
+
+export function dynamicTest(css: string) {
+  const bool = !!(css && dynamicReg.test(css))
+
+  dynamicReg.lastIndex = 0
+
+  return bool
 }
 
 export function isDynamicSelector(s: string): boolean {
   return dynamicTest(s)
 }
 
+const commentReg = /\/\*(.*?)\*\//gs
+
 export function isDynamicCss(css: string): boolean {
-  css = css && css.replace(/\/\*(.*?)\*\//gs, (s) => {
+  css = css && css.replace(commentReg, (s) => {
     if (dynamicTest(s)) {
       return ''
     }

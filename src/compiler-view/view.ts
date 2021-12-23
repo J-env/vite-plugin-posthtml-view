@@ -1,6 +1,6 @@
 import path from 'path'
 import fse from 'fs-extra'
-import postcss, { Result } from 'postcss'
+import postcss, { Result, Plugin as PostcssPlugin } from 'postcss'
 import type Processor from 'postcss/lib/processor'
 import postcssrc, { Result as PostcssrcResult } from 'postcss-load-config'
 import { Node as Tree, RawNode } from 'posthtml'
@@ -13,10 +13,11 @@ import type {
   StyleToSelector,
   ExtractHandle
 } from '../types'
+import { isExternalUrl, isDataUrl } from '../utils'
 
-import { OptionsUtils, htmlElements, svgElements, getTag, isDynamicCss } from './utils'
+import { OptionsUtils, htmlElements, svgElements, getTag, isDynamicCss, dynamicTest } from './utils'
 import { processWithPostHtml, parseAttrsToLocals, parseTemplate } from './parser'
-import { ScopedClasses, postcssScopedParser } from './css'
+import { ScopedClasses, postcssScopedParser, urlRewritePostcssPlugin } from './css'
 
 type Components = OptionsUtils['components']
 
@@ -65,13 +66,7 @@ export function parse(options: OptionsUtils) {
             throw new Error(`The component <${component.tag}> is the HTML tag. page file: ${options.from}`)
 
           } else if (svgElements.includes(component.tag)) {
-            tree.match('svg', (svg) => {
-              tree.match.call(svg, match(component.tag), (node) => {
-                throw new Error(`The component <${component.tag}> is the SVG tag. page file: ${options.from}`)
-              })
-
-              return svg
-            })
+            throw new Error(`The component <${component.tag}> is the SVG tag. page file: ${options.from}`)
           }
 
           if (node.attrs) {
@@ -355,7 +350,8 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 
     if (hasExtract) {
       promises.push(
-        processor.process(css.css, { ...postcssrc_sync.options, from: from || undefined })
+        processor
+          .process(css.css, { ...postcssrc_sync.options, from: from || undefined })
           .then(result => {
             styled.extract && styled.extract({
               type: 'css',
@@ -460,7 +456,8 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 
     if (css) {
       promises.push(
-        processor.process(css, { ...postcssrc_sync.options, from: from || undefined })
+        processor
+          .process(css, { ...postcssrc_sync.options, from: from || undefined })
           .then(result => {
             style.content = [result.css]
           })
@@ -512,12 +509,20 @@ function parseStyleAndScript(
   const {
     stylePreprocessor,
     styled: optionStyled,
+    assets,
     noflip,
     cssjanus
   } = options
 
   const cssPreprocessor = (css: string) => {
     return Promise.resolve(stylePreprocessor(css))
+  }
+
+  const urlReplacer = async (url: string, src?: string) => {
+    url = options.join(src || component.src, url)
+    url = options.slash(url, true)
+
+    return url
   }
 
   return async function (tree: Tree) {
@@ -543,10 +548,8 @@ function parseStyleAndScript(
           Promise.resolve(null)
             .then(() => {
               if (src) {
-                return fse.readFile(
-                  options.join(component.src, src),
-                  options.encoding
-                )
+                src = options.join(component.src, src)
+                return fse.readFile(src, options.encoding)
               }
 
               return Promise.resolve(content)
@@ -557,6 +560,26 @@ function parseStyleAndScript(
               css = noflip(css)
 
               return cssPreprocessor(css)
+            })
+            .then((result) => {
+              let css = result && result.code
+
+              if (css) {
+                return processor
+                  .use(urlRewritePostcssPlugin({
+                    replacer: (url) => urlReplacer(url, src)
+                  }) as PostcssPlugin)
+                  .process(css, {
+                    ...postcssrc_sync.options,
+                    from: src || component.src || undefined
+                  })
+                  .then(res => {
+                    result.code = res.css
+                    return result
+                  })
+              }
+
+              return result
             })
             .then((result) => {
               const resultCss = result && result.code
@@ -760,15 +783,39 @@ function parseStyleAndScript(
       // Inline style
       if (node.attrs.style) {
         promises.push(
-          processor.process(node.attrs.style, {
-            ...postcssrc_sync.options,
-            from: component.src || undefined
-          })
+          processor
+            .use(urlRewritePostcssPlugin({
+              replacer: urlReplacer
+            }) as PostcssPlugin)
+            .process(node.attrs.style, { ...postcssrc_sync.options, from: component.src || undefined })
             .then(result => {
               node.attrs && (node.attrs.style = cssjanus(result.css))
             })
         )
       }
+
+      assets.attributes.forEach((attrKey) => {
+        if (node.attrs[attrKey]) {
+          const rawUrl = node.attrs[attrKey]
+
+          if (
+            !String(rawUrl).trim() ||
+            isExternalUrl(rawUrl) ||
+            isDataUrl(rawUrl) ||
+            rawUrl.startsWith('#') ||
+            dynamicTest(rawUrl)
+          ) {
+            return
+          }
+
+          promises.push(
+            urlReplacer(node.attrs[attrKey])
+              .then((url) => {
+                node.attrs[attrKey] = url
+              })
+          )
+        }
+      })
 
       return node
     })

@@ -4,8 +4,8 @@ import postcssSafeParser from 'postcss-safe-parser'
 import postcssSelectorParser from 'postcss-selector-parser'
 
 import type { MinifyClassnames } from '../types'
-import { generateName, toValidCSSIdentifier } from '../utils'
-import { isDynamicSelector } from '../compiler-view/utils'
+import { generateName, toValidCSSIdentifier, withoutEscape } from '../utils'
+import { isDynamicSelector, dynamicReg } from '../compiler-view/utils'
 
 const objCache = {
   classes: {},
@@ -85,7 +85,7 @@ function selectorParser(selector: string) {
       let value = node.value
       let hasDynamic = false
 
-      const values = value.replace(/\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs, (s) => {
+      const values = value.replace(dynamicReg, (s) => {
         hasDynamic = true
         return ` ${s} `
       })
@@ -107,7 +107,8 @@ function selectorParser(selector: string) {
           .filter(Boolean)
           .join('')
           .trim()
-          .replace(/({|%|:|})/g, '\\$1')
+
+        value = withoutEscape(value)
 
         node.setPropertyWithoutEscape('value', prefixValue(value) || value)
         return
@@ -288,11 +289,14 @@ export function useTagId(href: string) {
   }
 }
 
+const phpReg = /\\?%\\?}(.*?)\\?{\\?%/gs
+const phpReg2 = /\s+(\\?{\\?%)/g
+
 export function joinValues(values: string, id?: boolean) {
   if (!values) return values
 
   if (!id) {
-    values = values.replace(/\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs, (s) => ` ${s} `)
+    values = values.replace(dynamicReg, (s) => ` ${s} `)
   }
 
   values = values
@@ -314,11 +318,11 @@ export function joinValues(values: string, id?: boolean) {
 
   if (!id) {
     values = values
-      .replace(/\\?%\\?}(.*?)\\?{\\?%/gs, (s, a) => {
+      .replace(phpReg, (s, a) => {
         if (!a) return s
         return s.replace(a, ` ${a.trim()} `)
       })
-      .replace(/\s+(\\?{\\?%)/g, '$1')
+      .replace(phpReg2, '$1')
   }
 
   return values

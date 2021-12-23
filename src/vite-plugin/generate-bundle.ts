@@ -59,6 +59,8 @@ export function getRtlOptions(options: PluginOptions): RtlOptions | false {
     }
 }
 
+const syntaxReg = /(.*)\[\[(rtl|ltr)\]\](.*)\[\[(rtl|ltr)\]\](.*)/si
+
 export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | false): Plugin {
   const filter = createFilter(['**/*.html'])
 
@@ -78,7 +80,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
   let syntaxArr: string[] | null = null
 
   if (rtl && type === 'syntax' && correctSyntax()) {
-    const sm = syntax.match(/(.*)\[\[(rtl|ltr)\]\](.*)\[\[(rtl|ltr)\]\](.*)/si)
+    const sm = syntax.match(syntaxReg)
 
     // ["<?php if($rtl): ?>", "rtl", "<?php else: ?>", "ltr", "<?php endif; ?>"]
     if (sm && sm.length >= 6) {

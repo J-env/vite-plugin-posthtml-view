@@ -23,6 +23,18 @@
 
     <input id="input1" type="text">
     <label for="input1"></label>
+
+    <br>
+    <br>
+    <br>
+
+    <div>
+      <div class="img-test">
+        <img src="/styles/2022.jpg" width="328" height="338" alt="">
+      </div>
+
+      <div data-src="../styles/christmas.jpeg" class="bg-test"></div>
+    </div>
   </template>
 
   <script type="module" src="/example/index.ts"></script>
@@ -31,5 +43,24 @@
 <style>
   :global(body) {
     padding-bottom: 100px;
+  }
+
+  .img-test {
+    float: left;
+  }
+
+  .bg-test {
+    margin-left: 10px;
+    margin-bottom: 10px;
+    float: left;
+    width: 328px;
+    background: url(/styles/christmas.jpeg) center center/cover no-repeat;
+
+    &:before {
+      content: "";
+      display: block;
+      height: 0;
+      padding-bottom: 75.15%;
+    }
   }
 </style>

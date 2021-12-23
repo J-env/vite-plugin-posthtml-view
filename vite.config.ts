@@ -2,8 +2,8 @@ import path from 'path'
 import fs from 'fs'
 import { defineConfig } from 'vite'
 import scss from 'sass'
-// import commonjsExternals from 'vite-plugin-commonjs-externals'
 import windiCSS from 'vite-plugin-windicss'
+import legacy from '@vitejs/plugin-legacy'
 
 import { dependencies } from './package.json'
 import { vitePluginPosthtmlView } from './src'
@@ -12,9 +12,6 @@ export default defineConfig(async (env) => {
   if (env.command === 'build' && env.mode !== 'example') {
     return {
       plugins: [
-        // commonjsExternals({
-        //   externals: ['path', 'fs', 'crypto']
-        // }),
         {
           name: '_project:generateBundle',
           enforce: 'post',
@@ -134,6 +131,17 @@ export default defineConfig(async (env) => {
             code: output.css.toString()
           }
         }
+      }),
+
+      legacy({
+        targets: [
+          'chrome >= 49',
+          'safari >= 10',
+          'Firefox ESR',
+          'firefox >= 18',
+          'edge >= 12',
+          'not IE 11'
+        ]
       })
     ],
     build: {

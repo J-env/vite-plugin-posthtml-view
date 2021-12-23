@@ -66,10 +66,13 @@ export async function minifyHtml(html: string, options: PluginOptions) {
   return replaceIdJson(html)
 }
 
+const spaceReg = /\s+(?=[:"'\[\]\{\}])/g
+const idJsonReg = /<script type="?application\/ld\+json"?>(.*?)<\/script>/gs
+
 function replaceIdJson(html: string) {
   try {
-    const str = html.replace(/<script type="?application\/ld\+json"?>(.*?)<\/script>/g, (s) => {
-      return s.replace(/\s+(?=[:"'\[\]\{\}])/g, '')
+    const str = html.replace(idJsonReg, (s) => {
+      return s.replace(spaceReg, '')
     })
 
     html = str

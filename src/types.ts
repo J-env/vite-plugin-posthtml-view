@@ -200,7 +200,13 @@ export interface Options {
     extract?: ExtractHandle
   }
 
-  // assets: {}
+  assets: {
+    /**
+     * @example ['data-src', 'data-img']
+     * @default ['data-src', 'data-img']
+     */
+    attributes: string[]
+  }
 
   parser: ProcessOptions
 
