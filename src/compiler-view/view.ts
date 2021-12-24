@@ -1,6 +1,6 @@
 import path from 'path'
 import fse from 'fs-extra'
-import postcss, { Result, Plugin as PostcssPlugin } from 'postcss'
+import postcss, { Result } from 'postcss'
 import type Processor from 'postcss/lib/processor'
 import postcssrc, { Result as PostcssrcResult } from 'postcss-load-config'
 import { Node as Tree, RawNode } from 'posthtml'
@@ -15,9 +15,9 @@ import type {
 } from '../types'
 import { isExternalUrl, isDataUrl } from '../utils'
 
-import { OptionsUtils, htmlElements, svgElements, getTag, isDynamicCss, dynamicTest } from './utils'
+import { OptionsUtils, htmlElements, svgElements, getTag, isDynamicCss, dynamicTest, isFont } from './utils'
 import { processWithPostHtml, parseAttrsToLocals, parseTemplate } from './parser'
-import { ScopedClasses, postcssScopedParser, urlRewritePostcssPlugin } from './css'
+import { ScopedClasses, postcssScopedParser } from './css'
 
 type Components = OptionsUtils['components']
 
@@ -518,13 +518,6 @@ function parseStyleAndScript(
     return Promise.resolve(stylePreprocessor(css))
   }
 
-  const urlReplacer = async (url: string, src?: string) => {
-    url = options.join(src || component.src, url)
-    url = options.slash(url, true)
-
-    return url
-  }
-
   return async function (tree: Tree) {
     const promises: Promise<any>[] = []
 
@@ -560,26 +553,6 @@ function parseStyleAndScript(
               css = noflip(css)
 
               return cssPreprocessor(css)
-            })
-            .then((result) => {
-              let css = result && result.code
-
-              if (css) {
-                return processor
-                  .use(urlRewritePostcssPlugin({
-                    replacer: (url) => urlReplacer(url, src)
-                  }) as PostcssPlugin)
-                  .process(css, {
-                    ...postcssrc_sync.options,
-                    from: src || component.src || undefined
-                  })
-                  .then(res => {
-                    result.code = res.css
-                    return result
-                  })
-              }
-
-              return result
             })
             .then((result) => {
               const resultCss = result && result.code
@@ -643,12 +616,33 @@ function parseStyleAndScript(
         options,
         component.src,
         start_mark,
-        end_mark
+        end_mark,
+        false
+      )
+
+      const globalAst = postcssScopedParser(
+        global_css,
+        component.resolveId,
+        options,
+        component.src,
+        start_mark,
+        end_mark,
+        true
       )
 
       scoped_css = ast.css
       scopedHash = ast.scopedHash
       scopedClasses = ast.scopedClasses
+
+      // global
+      global_css = globalAst.css
+
+      globalAst.scopedClasses.assetsCache.forEach((e) => {
+        scopedClasses && scopedClasses.assetsCache.add(e)
+      })
+
+      globalAst.scopedClasses.assetsCache.clear()
+
       merges.length = 0
 
       const replaceCss = (css: string) => {
@@ -784,12 +778,28 @@ function parseStyleAndScript(
       if (node.attrs.style) {
         promises.push(
           processor
-            .use(urlRewritePostcssPlugin({
-              replacer: urlReplacer
-            }) as PostcssPlugin)
             .process(node.attrs.style, { ...postcssrc_sync.options, from: component.src || undefined })
             .then(result => {
-              node.attrs && (node.attrs.style = cssjanus(result.css))
+              const s = '.__posthtml_view_inline_css_123456_abcdef__{'
+              const ast = postcssScopedParser(
+                `${s}${result.css}}`,
+                component.resolveId,
+                options,
+                component.src,
+                '',
+                '',
+                true
+              )
+
+              ast.scopedClasses.assetsCache.forEach((e) => {
+                scopedClasses && scopedClasses.assetsCache.add(e)
+              })
+
+              ast.scopedClasses.assetsCache.clear()
+
+              const css = ast.css.replace(s, '').replace('}', '')
+
+              node.attrs && (node.attrs.style = cssjanus(css))
             })
         )
       }
@@ -808,12 +818,12 @@ function parseStyleAndScript(
             return
           }
 
-          promises.push(
-            urlReplacer(node.attrs[attrKey])
-              .then((url) => {
-                node.attrs[attrKey] = url
-              })
-          )
+          let url = options.join(component.src, rawUrl)
+          url = options.slash(url, true)
+
+          scopedClasses && scopedClasses.assetsCache.add(url)
+
+          node.attrs[attrKey] = url
         }
       })
 
@@ -823,6 +833,46 @@ function parseStyleAndScript(
     if (promises.length > 0) {
       await Promise.all(promises)
       promises.length = 0
+    }
+
+    if (options.mode !== 'development' && scopedClasses && scopedClasses.assetsCache.size) {
+      const div: any = {
+        tag: 'div',
+        attrs: {
+          '__posthtml_view_assets_div__': true,
+          'style': 'display:none;'
+        },
+        content: []
+      }
+
+      scopedClasses.assetsCache.forEach((url) => {
+        if (isFont(url)) {
+          div.content.push({
+            tag: 'link',
+            attrs: {
+              rel: 'preload',
+              as: 'font',
+              href: url,
+              'data-raw-url': url,
+            }
+          })
+
+        } else {
+          div.content.push({
+            tag: 'img',
+            attrs: {
+              src: url,
+              'data-raw-url': url,
+            },
+          })
+        }
+      })
+
+      if (div.content.length && Array.isArray(tree)) {
+        tree.push(div)
+      }
+
+      scopedClasses.assetsCache.clear()
     }
 
     return tree

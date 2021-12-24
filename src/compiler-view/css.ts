@@ -1,4 +1,4 @@
-import { Node, AnyNode, PluginCreator } from 'postcss'
+import { Node, AnyNode } from 'postcss'
 import postcssSafeParser from 'postcss-safe-parser'
 import postcssSelectorParser from 'postcss-selector-parser'
 
@@ -14,12 +14,18 @@ interface ParserType<Child extends Node = AnyNode> {
 export interface ScopedClasses {
   classNames: string[]
   tags: Record<string, boolean>
+  assetsCache: Set<string>
 }
 
-type CssUrlReplacer = (url: string, importer?: string) => string | Promise<string>
+type CssUrlReplacer = (url: string, importer?: string) => string
 
 const animationNameReg = /^(-\w+-)?animation-name$/
 const animationReg = /^(-\w+-)?animation$/
+const keyframesReg = /-?keyframes$/
+// @see vite plugins
+export const cssUrlRE = /(?<=^|[^\w\-\u0080-\uffff])url\(\s*('[^']+'|"[^"]+"|[^'")]+)\s*\)/
+
+export const cssImageSetRE = /image-set\(([^)]+)\)/
 
 export function postcssScopedParser(
   css: string,
@@ -27,79 +33,85 @@ export function postcssScopedParser(
   options: OptionsUtils,
   from: string,
   start_mark: string,
-  end_mark: string
+  end_mark: string,
+  global?: boolean
 ) {
-  const _hashCleanHandle = (css: string) => {
-    return css.replace(start_mark, '').replace(end_mark, '')
-  }
-
-  const isProd = options.mode === 'production'
-  const hash = slugify(`scoped-${resolveId}:` + (isProd ? _hashCleanHandle(css || '') : ''))
-  const scopedHash = toValidCSSIdentifier((options.styled.prefix || '') + hash)
-
   const ast = postcssSafeParser(css, {
     from: from
   })
 
   const scopedClasses: ScopedClasses = {
     classNames: [],
-    tags: {}
+    tags: {},
+    assetsCache: new Set()
   }
 
   const keyframes = Object.create(null)
-  let isWalkDecls = false
+  let walkDeclsKeyFrames = false
+  let scopedHash = ''
 
-  function walkNodes(nodes: ParserType['nodes']) {
-    nodes.forEach((rule) => {
-      if (
-        rule.type === 'atrule' &&
-        (rule.name === 'media' || rule.name === 'supports')
-      ) {
-        walkNodes(rule.nodes)
+  if (!global) {
+    const _hashCleanHandle = (css: string) => {
+      return css.replace(start_mark, '').replace(end_mark, '')
+    }
 
-      } else {
-        switch (rule.type) {
-          case 'rule':
-            if ([start_mark, end_mark].includes(rule.selector + '{}')) {
-              return
-            }
+    const isProd = options.mode === 'production'
+    const hash = slugify(`scoped-${resolveId}:` + (isProd ? _hashCleanHandle(css || '') : ''))
+    scopedHash = toValidCSSIdentifier((options.styled.prefix || '') + hash)
 
-            clearInvalidValues(rule.nodes)
+    // scoped
+    function walkNodes(nodes: ParserType['nodes']) {
+      nodes.forEach((rule) => {
+        if (
+          rule.type === 'atrule' &&
+          (rule.name === 'media' || rule.name === 'supports')
+        ) {
+          walkNodes(rule.nodes)
 
-            rule.selector = replaceGlobalPseudo(
-              scopedParser(rule.selector, scopedHash, scopedClasses)
-            )
-            break;
+        } else {
+          switch (rule.type) {
+            case 'rule':
+              if ([start_mark, end_mark].includes(rule.selector + '{}')) {
+                return
+              }
 
-          case 'atrule':
-            if (/-?keyframes$/.test(rule.name)) {
-              const hasGlobal = rule.params.startsWith(':global')
+              clearInvalidValues(rule.nodes)
 
-              if (hasGlobal) {
-                rule.params = replaceGlobalPseudo(rule.params)
+              rule.selector = replaceGlobalPseudo(
+                scopedParser(rule.selector, scopedHash, scopedClasses)
+              )
+              break;
 
-              } else {
-                const keyframe_hash = `_${hash}`
+            case 'atrule':
+              if (keyframesReg.test(rule.name)) {
+                const hasGlobal = rule.params.startsWith(':global')
 
-                if (!rule.params.endsWith(keyframe_hash)) {
-                  isWalkDecls = true
-                  keyframes[rule.params] = rule.params = rule.params + keyframe_hash
+                if (hasGlobal) {
+                  rule.params = replaceGlobalPseudo(rule.params)
+
+                } else {
+                  const keyframe_hash = `_${hash}`
+
+                  if (!rule.params.endsWith(keyframe_hash)) {
+                    walkDeclsKeyFrames = true
+                    keyframes[rule.params] = rule.params = rule.params + keyframe_hash
+                  }
                 }
               }
-            }
-            break;
+              break;
 
-          default:
-            break;
+            default:
+              break;
+          }
         }
-      }
-    })
+      })
+    }
+
+    walkNodes(ast.nodes)
   }
 
-  walkNodes(ast.nodes)
-
-  if (isWalkDecls) {
-    ast.walkDecls((decl) => {
+  ast.walkDecls((decl) => {
+    if (walkDeclsKeyFrames) {
       // @see: vue-sfc-scoped
       if (animationNameReg.test(decl.prop)) {
         decl.value = decl.value
@@ -126,8 +138,26 @@ export function postcssScopedParser(
           })
           .join(',')
       }
-    })
-  }
+    }
+
+    const isCssUrl = cssUrlRE.test(decl.value)
+    const isCssImageSet = cssImageSetRE.test(decl.value)
+
+    if (isCssUrl || isCssImageSet) {
+      const replacerForDecl = (url: string) => {
+        url = options.join(from, url)
+        url = options.slash(url, true)
+
+        scopedClasses.assetsCache.add(url)
+
+        return url
+      }
+
+      const rewriterToUse = isCssUrl ? rewriteCssUrls : rewriteCssImageSet
+
+      decl.value = rewriterToUse(decl.value, replacerForDecl)
+    }
+  })
 
   return {
     scopedHash,
@@ -136,84 +166,34 @@ export function postcssScopedParser(
   }
 }
 
-// @see vite plugins
-export const cssUrlRE = /(?<=^|[^\w\-\u0080-\uffff])url\(\s*('[^']+'|"[^"]+"|[^'")]+)\s*\)/
-
-export const cssImageSetRE = /image-set\(([^)]+)\)/
-
-export const urlRewritePostcssPlugin: PluginCreator<{
-  replacer: CssUrlReplacer
-}> = (opts) => {
-
-  if (!opts) {
-    return {
-      postcssPlugin: 'postcss-url-rewrite',
-    }
-  }
-
-  return {
-    postcssPlugin: 'postcss-url-rewrite',
-    Once(root) {
-      const promises: Promise<void>[] = []
-
-      root.walkDecls((decl) => {
-        const isCssUrl = cssUrlRE.test(decl.value)
-        const isCssImageSet = cssImageSetRE.test(decl.value)
-
-        if (isCssUrl || isCssImageSet) {
-          const replacerForDecl = (rawUrl: string) => {
-            const importer = decl.source?.input.file
-            return opts.replacer(rawUrl, importer)
-          }
-
-          const rewriterToUse = isCssUrl ? rewriteCssUrls : rewriteCssImageSet
-
-          promises.push(
-            rewriterToUse(decl.value, replacerForDecl)
-              .then((url) => {
-                decl.value = url
-              })
-          )
-        }
-      })
-
-      if (promises.length) {
-        return Promise.all(promises) as any
-      }
-    }
-  }
-}
-
-urlRewritePostcssPlugin.postcss = true
-
-function rewriteCssUrls(css: string, replacer: CssUrlReplacer): Promise<string> {
-  return asyncReplace(css, cssUrlRE, async (match) => {
+function rewriteCssUrls(css: string, replacer: CssUrlReplacer) {
+  return urlReplace(css, cssUrlRE, (match) => {
     const [matched, rawUrl] = match
-    return await doUrlReplace(rawUrl, matched, replacer)
+    return doUrlReplace(rawUrl, matched, replacer)
   })
 }
 
-function rewriteCssImageSet(css: string, replacer: CssUrlReplacer): Promise<string> {
-  return asyncReplace(css, cssImageSetRE, async (match) => {
+function rewriteCssImageSet(css: string, replacer: CssUrlReplacer) {
+  return urlReplace(css, cssImageSetRE, (match) => {
     const [matched, rawUrl] = match
-    const url = await processSrcSet(rawUrl, ({ url }) => doUrlReplace(url, matched, replacer))
+    const url = processSrcSet(rawUrl, ({ url }) => doUrlReplace(url, matched, replacer))
 
     return `image-set(${url})`
   })
 }
 
-export async function asyncReplace(
+export function urlReplace(
   input: string,
   re: RegExp,
-  replacer: (match: RegExpExecArray) => string | Promise<string>
-): Promise<string> {
+  replacer: (match: RegExpExecArray) => string
+): string {
   let match: RegExpExecArray | null
   let remaining = input
   let rewritten = ''
 
   while ((match = re.exec(remaining))) {
     rewritten += remaining.slice(0, match.index)
-    rewritten += await replacer(match)
+    rewritten += replacer(match)
     remaining = remaining.slice(match.index + match[0].length)
   }
 
@@ -222,7 +202,7 @@ export async function asyncReplace(
   return rewritten
 }
 
-async function doUrlReplace(rawUrl: string, matched: string, replacer: CssUrlReplacer) {
+function doUrlReplace(rawUrl: string, matched: string, replacer: CssUrlReplacer) {
   let wrap = ''
   const first = rawUrl[0]
 
@@ -235,7 +215,7 @@ async function doUrlReplace(rawUrl: string, matched: string, replacer: CssUrlRep
     return matched
   }
 
-  return `url(${wrap}${await replacer(rawUrl)}${wrap})`
+  return `url(${wrap}${replacer(rawUrl)}${wrap})`
 }
 
 interface ImageCandidate {
@@ -245,10 +225,7 @@ interface ImageCandidate {
 
 const escapedSpaceCharacters = /( |\\t|\\n|\\f|\\r)+/g
 
-export async function processSrcSet(
-  srcs: string,
-  replacer: (arg: ImageCandidate) => Promise<string>
-): Promise<string> {
+export function processSrcSet(srcs: string, replacer: (arg: ImageCandidate) => string): string {
   const imageCandidates: ImageCandidate[] = srcs
     .split(',')
     .map((s) => {
@@ -261,14 +238,12 @@ export async function processSrcSet(
     })
     .filter(({ url }) => !!url)
 
-  const ret = await Promise.all(
-    imageCandidates.map(async ({ url, descriptor }) => {
-      return {
-        url: await replacer({ url, descriptor }),
-        descriptor
-      }
-    })
-  )
+  const ret = imageCandidates.map(({ url, descriptor }) => {
+    return {
+      url: replacer({ url, descriptor }),
+      descriptor
+    }
+  })
 
   return ret.reduce((prev, { url, descriptor }, index) => {
     descriptor = descriptor || ''

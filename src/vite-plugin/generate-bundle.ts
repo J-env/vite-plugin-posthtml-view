@@ -149,86 +149,131 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
         return tree
       })
       .use((tree) => {
-        if (minifyOptions) {
-          tree.walk((node) => {
-            if (node.attrs) {
-              if (minifyOptions.attributes && minifyOptions.attributes.length) {
-                const attrs = Object.keys(node.attrs)
+        type RawUrl = string
+        type AssetsUrl = string
 
-                minifyOptions.attributes.forEach((item) => {
-                  if (item === 'id' || item === 'class') return
+        const assets: Map<RawUrl, AssetsUrl> = new Map()
 
-                  const at = attrs.find(attr => attr.includes(item))
+        const replaceAssets = (str: string) => {
+          if (str && assets.size) {
+            assets.forEach((assetsUrl, rawUrl) => {
+              str = replaceAll(str, rawUrl, assetsUrl)
+            })
+          }
 
-                  if (at) {
-                    node.attrs[at] = joinValues(node.attrs[at])
-                  }
-                })
-              }
+          return str
+        }
 
-              if (node.attrs.class) {
-                node.attrs.class = joinValues(node.attrs.class)
-              }
-
-              if (node.attrs.id) {
-                node.attrs.id = joinValues(node.attrs.id, true)
-              }
-
-              if (node.attrs['for']) {
-                const forId = htmlFor(node.attrs['for'])
-
-                if (forId) {
-                  node.attrs['for'] = forId
-                }
-              }
-
-              // svg fill="url(#id)"
-              const urls = ['mask', 'fill', 'filter']
-
-              urls.forEach((item) => {
-                if (node.attrs[item]) {
-                  const tagId = useTagId(node.attrs[item].replace(/url\((.*?)\)/g, '$1'))
-
-                  if (tagId) {
-                    node.attrs[item] = `url(${tagId})`
-                  }
-                }
-              })
-
-              // svg
-              if (
-                node.tag === 'use' &&
-                (node.attrs.href || node.attrs['xlink:href'])
-              ) {
-                const useAttr = node.attrs.href ? 'href' : 'xlink:href'
-                const tagId = useTagId(node.attrs[useAttr] || '')
-
-                if (tagId) {
-                  node.attrs[useAttr] = tagId
-                }
-              }
+        tree.match(match('div[__posthtml_view_assets_div__]'), (div) => {
+          tree.match.call(div, match('[data-raw-url]'), (node) => {
+            if (node.attrs && node.attrs['data-raw-url']) {
+              assets.set(node.attrs['data-raw-url'], node.attrs.href || node.attrs.src || '')
             }
+
+            // @ts-ignore
+            node.tag = false
 
             return node
           })
-        }
 
-        return tree
-      })
-      .use((tree) => {
+          // @ts-ignore
+          div.tag = false
+          delete div.content
+
+          return div
+        })
+
+        const attributes = options.assets.attributes
+
+        tree.walk((node) => {
+          if (node.attrs) {
+            attributes && attributes.forEach((attrKey) => {
+              if (node.attrs[attrKey]) {
+                const rawUrl = node.attrs[attrKey]
+
+                node.attrs[attrKey] = assets.get(rawUrl) || rawUrl
+              }
+            })
+
+            if (node.attrs.style) {
+              node.attrs.style = replaceAssets(node.attrs.style)
+            }
+          }
+
+          if (minifyOptions && node.attrs) {
+            if (minifyOptions.attributes && minifyOptions.attributes.length) {
+              const attrs = Object.keys(node.attrs)
+
+              minifyOptions.attributes.forEach((item) => {
+                if (item === 'id' || item === 'class') return
+
+                const at = attrs.find(attr => attr.includes(item))
+
+                if (at) {
+                  node.attrs[at] = joinValues(node.attrs[at])
+                }
+              })
+            }
+
+            if (node.attrs.class) {
+              node.attrs.class = joinValues(node.attrs.class)
+            }
+
+            if (node.attrs.id) {
+              node.attrs.id = joinValues(node.attrs.id, true)
+            }
+
+            if (node.attrs['for']) {
+              const forId = htmlFor(node.attrs['for'])
+
+              if (forId) {
+                node.attrs['for'] = forId
+              }
+            }
+
+            // svg fill="url(#id)"
+            const urls = ['mask', 'fill', 'filter']
+
+            urls.forEach((item) => {
+              if (node.attrs[item]) {
+                const tagId = useTagId(node.attrs[item].replace(/url\((.*?)\)/g, '$1'))
+
+                if (tagId) {
+                  node.attrs[item] = `url(${tagId})`
+                }
+              }
+            })
+
+            // svg
+            if (
+              node.tag === 'use' &&
+              (node.attrs.href || node.attrs['xlink:href'])
+            ) {
+              const useAttr = node.attrs.href ? 'href' : 'xlink:href'
+              const tagId = useTagId(node.attrs[useAttr] || '')
+
+              if (tagId) {
+                node.attrs[useAttr] = tagId
+              }
+            }
+          }
+
+          return node
+        })
+
         const syntaxStyleTag = 'posthtml-view-syntax-style-x'
 
         tree.match(match('style'), (style) => {
-          let content = [].concat((style.content as []) || '').join('').trim()
+          let content = replaceAssets([].concat((style.content as []) || '').join('').trim())
 
-          // remove    noflip placeholder
-          content = content && placeholderToNoflip(content, '')
+          // remove noflip placeholder
+          let ltrContent = content && placeholderToNoflip(content, '')
 
           // '<?php if($rtl): ?>[[rtl]]<?php else: ?>[[ltr]]<?php endif; ?>'
-          if (content && syntaxArr && syntaxArr.length) {
+          if (ltrContent && syntaxArr && syntaxArr.length) {
             const rtlContent = janusCss(content)
 
-            if (rtlContent !== content) {
+            if (rtlContent !== ltrContent) {
               style.content = syntaxArr.map(item => {
                 if (item === 'rtl') {
                   return {
@@ -242,7 +287,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                   return {
                     tag: syntaxStyleTag,
                     attrs: style.attrs,
-                    content,
+                    content: ltrContent,
                   } as any
                 }
 
@@ -256,8 +301,8 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
             }
           }
 
-          if (content) {
-            style.content = [content]
+          if (ltrContent) {
+            style.content = [ltrContent]
           }
 
           return style
@@ -561,4 +606,12 @@ function getTargetNodeIndex(content) {
   }
 
   return index
+}
+
+function replaceAll(str: string, searchValue: string, replaceValue: string) {
+  while (str.includes(searchValue)) {
+    str = str.replace(searchValue, replaceValue)
+  }
+
+  return str
 }

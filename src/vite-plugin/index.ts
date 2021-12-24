@@ -34,6 +34,7 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
 
   options.getOptions = (opts) => {
     options.styled = opts.styled
+    options.assets = opts.assets
   }
 
   const pageCache: Map<string, string> = new Map()

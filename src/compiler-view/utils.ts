@@ -65,6 +65,15 @@ export function isDynamicSelector(s: string): boolean {
   return dynamicTest(s)
 }
 
+const fontReg = /\.(ttf|eot|woff|woff2)$/
+
+export function isFont(url: string) {
+  url = url.split('#')[0]
+  url = url.split('?')[0]
+
+  return fontReg.test(url)
+}
+
 const commentReg = /\/\*(.*?)\*\//gs
 
 export function isDynamicCss(css: string): boolean {
