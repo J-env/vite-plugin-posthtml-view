@@ -38,18 +38,15 @@ export function withoutEscape(val: string) {
  */
 export function* generateName(
   filters: RegExp[] = [],
-  upperCase: boolean = true,
-  callback?: (name: string) => boolean
-) {
-  callback = callback || _callback
-
+  upperCase: boolean = true
+): Generator<string, string, unknown> {
   let abc = 'abcdefghijklmnopqrstuvwxyz'
 
   if (upperCase) {
     abc = abc + abc.toUpperCase()
   }
 
-  const digital = '0123456789_-'
+  const digital = '0123456789'
   const str = abc + digital
 
   const abc_len = abc.length
@@ -66,20 +63,17 @@ export function* generateName(
 
     do {
       name = name + str.charAt(num % base)
-      num = Math.floor(num / base)
+      // num = Math.floor(num / base)
+      num = ~~(num / base)
       base = str_len
 
     } while (num > 0)
 
-    if (!filters.some(reg => reg.test(name)) && callback(name)) {
+    if (!filters.some(reg => reg.test(name))) {
       yield name
     }
 
     i++
     num = i
   }
-}
-
-function _callback(name) {
-  return true
 }

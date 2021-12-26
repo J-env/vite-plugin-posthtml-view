@@ -1,30 +1,76 @@
-import fse from 'fs-extra'
 import type { Node, AnyNode } from 'postcss'
 import postcssSafeParser from 'postcss-safe-parser'
 import postcssSelectorParser from 'postcss-selector-parser'
+import { JSONStorage } from 'node-localstorage'
 
 import type { MinifyClassnames } from '../types'
-import { generateName, toValidCSSIdentifier, withoutEscape } from '../utils'
+import { generateName, withoutEscape } from '../utils'
 import { isDynamicSelector, dynamicReg } from '../compiler-view/utils'
 
-const objCache = {
-  classes: {},
-  ids: {}
+let minify: MinifyClassnames
+let classGenerator: Generator<string, string, unknown>
+let idGenerator: Generator<string, string, unknown>
+let jsonStorage: JSONStorage
+
+interface Storage {
+  classesKey: '_classes'
+  idsKey: '_ids'
+
+  _classes: Record<string, string>
+  _ids: Record<string, string>
+  classes: Record<string, string>
+  ids: Record<string, string>
 }
 
-let cache: Cache
-let minify: MinifyClassnames
+const storage: Storage = {
+  classesKey: '_classes',
+  idsKey: '_ids',
+  _classes: {},
+  _ids: {},
+  classes: {},
+  ids: {},
+}
 
-let classGenerator: Generator<string, void, unknown>
-let idGenerator: Generator<string, void, unknown>
+const classes_set = new Set<string>()
+const ids_set = new Set<string>()
+
+function readCache(key: string): Record<string, string> {
+  try {
+    const data = jsonStorage.getItem(key) || {}
+
+    return data
+
+  } catch (e) {
+    return {}
+  }
+}
+
+export async function writeCache() {
+  if (jsonStorage) {
+    jsonStorage.setItem(storage.classesKey, storage.classes)
+    jsonStorage.setItem(storage.idsKey, storage.ids)
+  }
+}
 
 export function createGenerator(_minify: MinifyClassnames) {
   minify = minify || _minify
 
-  requireCache()
+  if (minify.__cache_file__ && !jsonStorage) {
+    jsonStorage = new JSONStorage(minify.__cache_file__)
 
-  classGenerator = classGenerator || generateName(minify.generateNameFilters, minify.upperCase, generateClassesCallback)
-  idGenerator = idGenerator || generateName(minify.generateNameFilters, minify.upperCase, generateIdCallback)
+    storage._classes = readCache(storage.classesKey)
+    storage._ids = readCache(storage.idsKey)
+  }
+
+  classGenerator = classGenerator || generateName(
+    minify.generateNameFilters,
+    minify.upperCase
+  )
+
+  idGenerator = idGenerator || generateName(
+    minify.generateNameFilters,
+    minify.upperCase
+  )
 }
 
 export function minifyClassesHandle(css: string) {
@@ -56,25 +102,6 @@ export function minifyClassesHandle(css: string) {
   return ast.toString()
 }
 
-let classes: string[]
-let ids: string[]
-
-function generateClassesCallback(name) {
-  if (!classes) {
-    return true
-  }
-
-  return classes.includes(name) ? false : true
-}
-
-function generateIdCallback(name) {
-  if (!ids) {
-    return true
-  }
-
-  return ids.includes(name) ? false : true
-}
-
 function selectorParser(selector: string) {
   return postcssSelectorParser((selectorRoot) => {
     selectorRoot.walkClasses((node) => {
@@ -96,7 +123,8 @@ function selectorParser(selector: string) {
           .map((val) => {
             if (!val) return ''
 
-            if (isFiltered(val)) {
+            // checked dynamic string
+            if (isFiltered(val, false)) {
               return val
             }
 
@@ -110,7 +138,7 @@ function selectorParser(selector: string) {
 
         value = withoutEscape(value)
 
-        node.setPropertyWithoutEscape('value', prefixValue(value) || value)
+        node.setPropertyWithoutEscape('value', value)
         return
       }
 
@@ -131,116 +159,72 @@ function selectorParser(selector: string) {
   }).processSync(selector)
 }
 
-let classesValues: Set<string>
-let idValues: Set<string>
-
-export async function writeCache() {
-  if (minify && minify.__cache_file__ && cache) {
-    try {
-      const data = {
-        classes: {},
-        ids: {}
-      }
-
-      classesValues.forEach((value) => {
-        if (cache.classes[value] != null) {
-          data.classes[value] = cache.classes[value]
-        }
-      })
-
-      idValues.forEach((value) => {
-        if (cache.ids[value] != null) {
-          data.ids[value] = cache.ids[value]
-        }
-      })
-
-      classesValues.clear()
-      idValues.clear()
-      cache.classes = {}
-      cache.ids = {}
-      classes.length = 0
-      ids.length = 0
-
-      await fse.outputFile(minify.__cache_file__, `module.exports=${JSON.stringify(data)}`, 'utf8')
-
-    } catch (e) {
-
-    }
-  }
-}
-
 function addClassesValues(value: string) {
-  if (minify.enableCache) {
-    classes = classes || Object.keys(cache.classes).map(k => cache.classes[k])
+  const cacheValue = storage._classes[value]
+
+  if (cacheValue) {
+    delete storage._classes[value]
+    storage.classes[value] = cacheValue
+    classes_set.add(cacheValue)
+
+    return cacheValue
   }
 
-  if (!cache.classes[value]) {
-    cache.classes[value] = classGenerator.next().value
+  const preValue = storage.classes[value]
+
+  if (preValue) {
+    classes_set.add(preValue)
+    return preValue
   }
 
-  let v = cache.classes[value]
+  function generateClasses() {
+    let v = classGenerator.next().value
 
-  if (typeof minify.classNameSlug === 'function') {
-    try {
-      v = toValidCSSIdentifier(minify.classNameSlug(v || value, value, false)) || v
-    } catch (e) {
+    if (classes_set.has(v)) {
+      return generateClasses()
     }
+
+    return v
   }
 
-  if (minify.enableCache) {
-    classesValues = classesValues || new Set()
-    v && !classes.includes(v) && classes.push(v)
-    classesValues.add(value)
-  }
+  const v = generateClasses()
+  classes_set.add(v)
 
   return v
 }
 
 function addIdValues(value: string) {
-  if (minify.enableCache) {
-    ids = ids || Object.keys(cache.ids).map(k => cache.ids[k])
+  const cacheValue = storage._ids[value]
+
+  if (cacheValue) {
+    delete storage._ids[value]
+    storage.ids[value] = cacheValue
+    ids_set.add(cacheValue)
+
+    return cacheValue
   }
 
-  if (!cache.ids[value]) {
-    cache.ids[value] = idGenerator.next().value
+  const preValue = storage.ids[value]
+
+  if (preValue) {
+    ids_set.add(preValue)
+    return preValue
   }
 
-  let v = cache.ids[value]
+  function generateIds() {
+    let v = idGenerator.next().value
 
-  if (typeof minify.classNameSlug === 'function') {
-    try {
-      v = toValidCSSIdentifier(minify.classNameSlug(v || value, value, true)) || v
-    } catch (e) {
+    if (ids_set.has(v)) {
+      return generateIds()
     }
+
+    return v
   }
 
-  if (minify.enableCache) {
-    idValues = idValues || new Set()
-    v && !ids.includes(v) && ids.push(v)
-    idValues.add(value)
-  }
+  const v = generateIds()
+  ids_set.add(v)
 
   return v
-}
-
-function requireCache() {
-  if (cache) {
-    return
-  }
-
-  let _cache
-
-  if (minify.__cache_file__) {
-    try {
-      const raw = require(minify.__cache_file__)
-
-      _cache = raw.__esModule ? raw.default : raw
-
-    } catch (e) {
-    }
-  }
-
-  cache = _cache || objCache
 }
 
 function isFiltered(value: string, id?: boolean, check?: boolean) {
@@ -284,8 +268,10 @@ export function useTagId(href: string) {
     return
   }
 
-  if (cache.ids[href]) {
-    return '#' + prefixValue(cache.ids[href])
+  const val = storage.ids[href]
+
+  if (val) {
+    return '#' + prefixValue(val)
   }
 }
 
@@ -330,9 +316,4 @@ export function joinValues(values: string, id?: boolean) {
 
 interface ParserType<Child extends Node = AnyNode> {
   nodes: Child[]
-}
-
-interface Cache {
-  classes: Record<string, string | void>
-  ids: Record<string, string | void>
 }

@@ -1,6 +1,6 @@
-const css_janus = require('cssjanus')
-
 import type { CssjanusOptions } from '../types'
+
+const css_janus = require('cssjanus')
 
 const cache = new Map<string, string>()
 

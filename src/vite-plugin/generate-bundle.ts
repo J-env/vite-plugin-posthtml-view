@@ -36,7 +36,6 @@ const defaultRtlOptions: RtlOptions = {
 }
 
 const defaultMinifyOptions: MinifyClassnames = {
-  classNameSlug: null,
   enableCache: true,
   generateNameFilters: [],
   upperCase: true,
@@ -398,7 +397,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
         minifyOptions.filters = [...minifyOptions.filters, '#vite-legacy-polyfill', '#vite-legacy-entry']
 
         if (minifyOptions.enableCache) {
-          minifyOptions.__cache_file__ = path.join(config.root, path.join(options.cacheDirectory, 'css', '_css.js'))
+          minifyOptions.__cache_file__ = path.join(config.root, path.join(options.cacheDirectory, 'css'))
 
         } else {
           minifyOptions.__cache_file__ = ''

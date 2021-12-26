@@ -85,12 +85,6 @@ export interface VitePluginOptions {
 
 export interface MinifyClassnames {
   /**
-   * Custom generated classname and id
-   * @default null
-   */
-  classNameSlug: classNameSlug | null
-
-  /**
    * Ensure classnames build is consistent
    * @default true
    */
@@ -128,8 +122,6 @@ export interface MinifyClassnames {
    */
   __cache_file__: string
 }
-
-export type classNameSlug = (slug: string, className: string, isId: boolean) => string
 
 export type RtlOptions = CssjanusOptions & {
   /**
