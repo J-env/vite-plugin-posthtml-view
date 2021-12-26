@@ -188,6 +188,7 @@ function addClassesValues(value: string) {
   }
 
   const v = generateClasses()
+  storage.classes[value] = v
   classes_set.add(v)
 
   return v
@@ -222,6 +223,7 @@ function addIdValues(value: string) {
   }
 
   const v = generateIds()
+  storage.ids[value] = v
   ids_set.add(v)
 
   return v
