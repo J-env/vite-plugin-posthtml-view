@@ -105,13 +105,13 @@ export default defineConfig(async (env) => {
         },
         styled: {},
 
-        // rtl: {
-        //   type: 'new-html'
-        // },
         rtl: {
-          type: 'syntax',
-          syntax: '<?php if($rtl): ?>[[rtl]]<?php else: ?>[[ltr]]<?php endif; ?>'
+          type: 'new-html'
         },
+        // rtl: {
+        //   type: 'syntax',
+        //   syntax: '<?php if($rtl): ?>[[rtl]]<?php else: ?>[[ltr]]<?php endif; ?>'
+        // },
 
         minifyClassnames: true,
         devMinifyHtml: true,

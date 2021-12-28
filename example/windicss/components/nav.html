@@ -1,0 +1,103 @@
+<nav class="relative flex items-center w-full px-2 lg:px-5 xl:px-8 z-10 bg-white test-nav">
+  <a class="flex flex-none h-full" href="/">logo</a>
+
+  <div class="flex-1 flex items-center h-full px-3">
+    <div class="hidden lg:flex h-full">
+      <a class="relative flex items-center justify-center flex-none h-full text-sm link-item link-is-selected"
+        href="/a">
+        <span class="relative">a</span>
+      </a>
+
+      <a class="relative flex items-center justify-center flex-none h-full text-sm link-item" href="/b">
+        <span class="relative">
+          b
+          <span class="absolute top-0 right-0 text-xs text-white rounded-md new-label">NEW</span>
+        </span>
+      </a>
+    </div>
+  </div>
+
+  <div class="flex-none inline-flex items-center justify-end h-full">
+    <div class="fixed">fixed</div>
+  </div>
+</nav>
+
+<style scoped>
+  .test-nav {
+    height: 56px;
+    box-shadow: 0px 3px 9px rgba(0, 0, 0, 0.08);
+
+    &>:global(*) {
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (min-width: 1024px) {
+      height: 50px;
+    }
+
+    @media (min-width: 1200px) {
+      height: 64px;
+    }
+  }
+
+  .link-item {
+    padding: 10px 14px;
+    margin-left: 30px;
+    color: #333;
+
+    @media (max-width: 1450px) {
+      margin-left: 15px;
+
+      &:first-of-type {
+        margin-left: 0;
+      }
+    }
+
+    &:before {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 6px;
+      background: #5ABB85;
+      opacity: 0;
+      visibility: hidden;
+      transition: .2s;
+    }
+  }
+
+  .link-is-selected,
+  .link-item:hover {
+    color: #5ABB85;
+
+    &:before {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+
+  .new-label {
+    padding: 2px 4px;
+    background: #FD5651;
+    transform: translate(100%, -85%);
+
+    &:after {
+      content: "";
+      position: absolute;
+      width: 0;
+      height: 0;
+      z-index: -1;
+      border-width: 8px;
+      border-color: transparent;
+      border-style: dashed;
+      bottom: -7px;
+      right: 14px;
+      border-left-color: #FD5651;
+      border-left-style: solid;
+      transform: rotate(15deg);
+      border-radius: 5px;
+    }
+  }
+</style>
