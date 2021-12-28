@@ -15,10 +15,17 @@
         </span>
       </a>
     </div>
+
+    <my-button class="fixed lg:hidden rounded-full text-white rounded-btn">
+      <svg class="inline-block" width="24" height="24" fill="none" focusable="false" aria-hidden="true" role="img">
+        <path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        </path>
+      </svg>
+    </my-button>
   </div>
 
   <div class="flex-none inline-flex items-center justify-end h-full">
-    <div class="fixed">fixed</div>
+    <div class="inline-block">block</div>
   </div>
 </nav>
 
@@ -98,6 +105,19 @@
       border-left-style: solid;
       transform: rotate(15deg);
       border-radius: 5px;
+    }
+  }
+
+  .rounded-btn {
+    right: 1rem;
+    bottom: 1rem;
+    width: 4rem;
+    height: 4rem;
+    z-index: 50;
+    background-color: rgba(17, 24, 39, 1);
+
+    svg {
+      transition: .3s;
     }
   }
 </style>

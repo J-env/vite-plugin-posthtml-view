@@ -22,6 +22,8 @@ interface Storage {
   ids: Record<string, string>
 }
 
+type MapObj = Record<string, null>
+
 const storage: Storage = {
   classesKey: '_classes',
   idsKey: '_ids',
@@ -31,12 +33,17 @@ const storage: Storage = {
   ids: {},
 }
 
-const classes_set = new Set<string>()
-const ids_set = new Set<string>()
+const classes_map: MapObj = {}
+const ids_map: MapObj = {}
 
-function readCache(key: string): Record<string, string> {
+function readCache(key: string, map: MapObj): Record<string, string> {
   try {
     const data = jsonStorage.getItem(key) || {}
+
+    Object.keys(data).forEach((k) => {
+      const v = data[k]
+      map[v] = null
+    })
 
     return data
 
@@ -58,18 +65,20 @@ export function createGenerator(_minify: MinifyClassnames) {
   if (minify.__cache_file__ && !jsonStorage) {
     jsonStorage = new JSONStorage(minify.__cache_file__)
 
-    storage._classes = readCache(storage.classesKey)
-    storage._ids = readCache(storage.idsKey)
+    storage._classes = readCache(storage.classesKey, classes_map)
+    storage._ids = readCache(storage.idsKey, ids_map)
   }
 
   classGenerator = classGenerator || generateName(
     minify.generateNameFilters,
-    minify.upperCase
+    minify.upperCase,
+    (name) => classes_map[name] !== null
   )
 
   idGenerator = idGenerator || generateName(
     minify.generateNameFilters,
-    minify.upperCase
+    minify.upperCase,
+    (name) => ids_map[name] !== null
   )
 }
 
@@ -163,9 +172,9 @@ function addClassesValues(value: string) {
   const cacheValue = storage._classes[value]
 
   if (cacheValue) {
-    delete storage._classes[value]
+    classes_map[cacheValue] = null
     storage.classes[value] = cacheValue
-    classes_set.add(cacheValue)
+    delete storage._classes[value]
 
     return cacheValue
   }
@@ -173,23 +182,13 @@ function addClassesValues(value: string) {
   const preValue = storage.classes[value]
 
   if (preValue) {
-    classes_set.add(preValue)
+    classes_map[preValue] = null
     return preValue
   }
 
-  function generateClasses() {
-    let v = classGenerator.next().value
-
-    if (classes_set.has(v)) {
-      return generateClasses()
-    }
-
-    return v
-  }
-
-  const v = generateClasses()
+  const v = classGenerator.next().value
+  classes_map[v] = null
   storage.classes[value] = v
-  classes_set.add(v)
 
   return v
 }
@@ -198,9 +197,9 @@ function addIdValues(value: string) {
   const cacheValue = storage._ids[value]
 
   if (cacheValue) {
-    delete storage._ids[value]
+    ids_map[cacheValue] = null
     storage.ids[value] = cacheValue
-    ids_set.add(cacheValue)
+    delete storage._ids[value]
 
     return cacheValue
   }
@@ -208,23 +207,13 @@ function addIdValues(value: string) {
   const preValue = storage.ids[value]
 
   if (preValue) {
-    ids_set.add(preValue)
+    ids_map[preValue] = null
     return preValue
   }
 
-  function generateIds() {
-    let v = idGenerator.next().value
-
-    if (ids_set.has(v)) {
-      return generateIds()
-    }
-
-    return v
-  }
-
-  const v = generateIds()
+  const v = idGenerator.next().value
+  ids_map[v] = null
   storage.ids[value] = v
-  ids_set.add(v)
 
   return v
 }
