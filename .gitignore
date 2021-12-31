@@ -8,7 +8,6 @@
 *.local
 **/.php-dev/
 dist/
-lib/
 
 # yarn.lock
 package-lock.json
