@@ -32,5 +32,8 @@ export declare function dynamicTest(css: string): boolean;
 export declare function isDynamicSelector(s: string): boolean;
 export declare function isFont(url: string): boolean;
 export declare function isDynamicCss(css: string): boolean;
+export declare function trimWhitespace(str: string): string;
+export declare function trimAttrWhitespace(str: string, conservativeCollapse?: boolean): string;
+export declare function cumbersomeTrim(str: string): string;
 export declare const htmlElements: string[];
 export declare const svgElements: string[];

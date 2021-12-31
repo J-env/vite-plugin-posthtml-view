@@ -59,7 +59,9 @@ export interface VitePluginOptions {
    */
   rtl: boolean | Partial<RtlOptions>
 
-  minifyHtml: MinifyOptions | boolean
+  minifyHtml: MinifyOptions | boolean | ((defaultOptions: MinifyOptions) => MinifyOptions | boolean)
+
+  minifyHtmlAfter?: (html: string) => string
 
   /**
    * @default false
@@ -191,6 +193,15 @@ export interface Options {
     type?: 'js' | 'ts'
     extract?: ExtractHandle
   }
+
+  /**
+   * @default all node.attrs
+   */
+  addClassIncludes?: string[]
+
+  trimAttr?: (value: string, trim: (str: string, conservativeCollapse?: boolean) => string) => string
+
+  cumbersomeTrim?: (value: string) => string
 
   assets: {
     /**

@@ -99,10 +99,11 @@ export default defineConfig(async (env) => {
         pagesDirectory: 'example',
         buildPagesDirectory: 'pages',
         registerComponentsFile: '/example/_layout/global-components.html',
-        // minifyHtml: false,
+
         php: {
           rename: false
         },
+
         styled: {},
 
         rtl: {
@@ -113,6 +114,7 @@ export default defineConfig(async (env) => {
         //   syntax: '<?php if($rtl): ?>[[rtl]]<?php else: ?>[[ltr]]<?php endif; ?>'
         // },
 
+        // minifyHtml: false,
         minifyClassnames: true,
         devMinifyHtml: true,
 

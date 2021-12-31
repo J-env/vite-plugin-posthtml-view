@@ -10,7 +10,7 @@ const defaultMinifyOptions: MinifyOptions = {
   // conservativeCollapse: false,
   // continueOnParseError: false,
   // customAttrAssign: [],
-  // customAttrCollapse: undefined,
+  // customAttrCollapse: /x-data|:class/,
   // customAttrSurround: [],
   // customEventAttributes: [],
   // decodeEntities: false,
@@ -31,22 +31,29 @@ const defaultMinifyOptions: MinifyOptions = {
   // quoteCharacter: undefined,
   removeAttributeQuotes: true,
   removeComments: true,
-  // removeEmptyAttributes: false,
+  removeEmptyAttributes: false,
   // removeEmptyElements: false,
   // removeOptionalTags: false,
   removeRedundantAttributes: true,
   removeScriptTypeAttributes: true,
   removeStyleLinkTypeAttributes: true,
+
+  // danger
   removeTagWhitespace: false,
+
   // sortAttributes: false,
   // sortClassName: false,
   // trimCustomFragments: false,
-  useShortDoctype: true
+  useShortDoctype: true,
 }
 
 let minifyOptions: MinifyOptions
 
 export async function minifyHtml(html: string, options: PluginOptions) {
+  if (typeof options.minifyHtml === 'function') {
+    options.minifyHtml = options.minifyHtml(defaultMinifyOptions)
+  }
+
   if (!options.minifyHtml) {
     return html
   }
@@ -56,30 +63,15 @@ export async function minifyHtml(html: string, options: PluginOptions) {
     : {
       ...defaultMinifyOptions,
       ...options.minifyHtml,
-      // danger
-      removeTagWhitespace: false
     }
   )
 
   html = await minify(html, minifyOptions)
 
-  return replaceIdJson(html)
-}
-
-const spaceReg = /\s+(?=[:"'\[\]\{\}])/g
-const idJsonReg = /<script type="?application\/ld\+json"?>(.*?)<\/script>/gs
-
-function replaceIdJson(html: string) {
-  try {
-    const str = html.replace(idJsonReg, (s) => {
-      return s.replace(spaceReg, '')
-    })
-
-    html = str
-
-  } catch (e) {
-
+  if (typeof options.minifyHtmlAfter === 'function') {
+    html = options.minifyHtmlAfter(html)
   }
 
   return html
 }
+

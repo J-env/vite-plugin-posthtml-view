@@ -1,0 +1,78 @@
+<layout-base title="alpinejs demo">
+  <template slot="main">
+
+    <!-- <div x-data="{ expanded: false }" :class="expanded && 'expanded-demo'"
+      class="p-4 border border-dark-100 rounded bg-white"> -->
+
+    <div x-data="{ expanded: false }" :class="{
+      'bg-red-300  expanded-demo': expanded,
+      'bg-white': !expanded
+    }" class="p-4 border border-dark-100 rounded bg-white">
+      <div class="relative">
+        <button @click="expanded = ! expanded"
+          class="bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-gray-50 text-white font-semibold h-12 px-6 rounded-lg w-full flex items-center justify-center sm:w-auto dark:bg-sky-500 dark:highlight-white/20 dark:hover:bg-sky-400">Toggle
+          Content</button>
+
+        <span :class="{
+          'bg-red-600': expanded,
+          'bg-dark-50': !expanded
+        }" class="absolute right-0 top-0 w-2.5 h-2.5 bg-dark-50 rounded-full"></span>
+      </div>
+
+      <div x-show="expanded" x-collapse hidden>
+        <div class="pt-4">
+          Reprehenderit eu excepteur ullamco esse cillum reprehenderit exercitation labore non. Dolore dolore ea
+          dolore
+          veniam sint in sint ex Lorem ipsum. Sint laborum deserunt deserunt amet voluptate cillum deserunt. Amet nisi
+          pariatur sit ut id. Ipsum est minim est commodo id dolor sint id quis sint Lorem.
+        </div>
+      </div>
+    </div>
+
+    <div x-data="{img: '../styles/christmas.jpeg'}">
+      <img :src="img" class="mt-3 mr-1 float-left" width="328" height="338" alt="">
+      <img :src="img" class="mt-3 float-left" width="328" height="338" alt="">
+
+      <span class="clear-both">&nbsp;</span>
+    </div>
+
+    <div class="clear-both"></div>
+
+
+    <div x-data="{
+      open: false,
+      toggle() {
+        this.open = !this.open
+      }
+    }">
+      <button @click="toggle()">Toggle Content</button>
+
+      <div x-show="open">
+        Content...
+      </div>
+    </div>
+
+  </template>
+
+  <!-- Alpine Plugins -->
+
+  <script defer src="https://unpkg.com/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
+
+  <script defer src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Alpine Core -->
+
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <script type="module" src="./index.ts"></script>
+</layout-base>
+
+<style>
+  :global(body) {
+    padding: 20px;
+  }
+
+  .expanded-demo {
+    box-shadow: 0 0 2px 4px #999;
+  }
+</style>

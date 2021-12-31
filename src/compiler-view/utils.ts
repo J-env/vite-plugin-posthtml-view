@@ -88,6 +88,23 @@ export function isDynamicCss(css: string): boolean {
   return dynamicTest(css)
 }
 
+export function trimWhitespace(str: string) {
+  return str && str.replace(/^[ \n\r\t\f]+/, '').replace(/[ \n\r\t\f]+$/, '')
+}
+
+export function trimAttrWhitespace(str: string, conservativeCollapse: boolean = true) {
+  str = str.replace(/ ?[\n\r]+ ?/g, '')
+    .replace(/\s{2,}/g, conservativeCollapse ? ' ' : '')
+
+  return trimWhitespace(str).replace(/\s*;\s*/g, ';')
+}
+
+export function cumbersomeTrim(str: string) {
+  return str
+    .replace(/^{\s+/g, '{')
+    .replace(/\s+}$/g, '}')
+}
+
 export const htmlElements = [
   'a',
   'abbr',

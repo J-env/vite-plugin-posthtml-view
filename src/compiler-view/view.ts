@@ -15,7 +15,18 @@ import type {
 } from '../types'
 import { isExternalUrl, isDataUrl } from '../utils'
 
-import { OptionsUtils, htmlElements, svgElements, getTag, isDynamicCss, dynamicTest, isFont } from './utils'
+import {
+  OptionsUtils,
+  htmlElements,
+  svgElements,
+  getTag,
+  isDynamicCss,
+  dynamicTest,
+  isFont,
+  trimAttrWhitespace,
+  cumbersomeTrim
+} from './utils'
+
 import { processWithPostHtml, parseAttrsToLocals, parseTemplate } from './parser'
 import { ScopedClasses, postcssScopedParser } from './css'
 
@@ -423,11 +434,40 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     })
   })
 
+  const trimAttr = typeof options.trimAttr === 'function'
+    ? options.trimAttr
+    : null
+
+  const _cumbersomeTrim = typeof options.cumbersomeTrim === 'function'
+    ? options.cumbersomeTrim
+    : null
+
+  const dirReg = /^(?:x-|v-|:|@)/
+
   tree.walk((node) => {
     if (node.tag && node.attrs) {
       Object.entries(node.attrs).forEach(([key, value]) => {
         if (['null', 'undefined'].includes(value as string)) {
           delete node.attrs[key]
+          return
+        }
+
+        if (typeof value === 'string' && value.trim()) {
+          let val = value
+
+          if (trimAttr) {
+            val = trimAttr(value, trimAttrWhitespace)
+
+          } else if (dirReg.test(key)) {
+            val = trimAttrWhitespace(value).trim()
+            val = cumbersomeTrim(val)
+
+            if (_cumbersomeTrim) {
+              val = _cumbersomeTrim(val)
+            }
+          }
+
+          node.attrs[key] = val
         }
       })
 
@@ -499,6 +539,7 @@ function parseStyleAndScript(
   const {
     stylePreprocessor,
     styled: optionStyled,
+    addClassIncludes,
     assets,
     noflip,
     cssjanus
@@ -752,12 +793,36 @@ function parseStyleAndScript(
 
       node.attrs = node.attrs || {}
 
-      if (scopedClasses && scopedHash && node.tag) {
-        const classNames = node.attrs.class || ''
+      const scopedCls = scopedClasses
+
+      if (scopedCls && scopedHash && node.tag) {
+        const attrs = node.attrs
+        const classNames = attrs.class || ''
+
+        const includes = (_attrs) => {
+          if (addClassIncludes && addClassIncludes.length) {
+            _attrs = {}
+
+            addClassIncludes.forEach((attr) => {
+              _attrs[attr] = attrs[attr]
+            })
+          }
+
+          for (const key in _attrs) {
+            if (Object.prototype.hasOwnProperty.call(_attrs, key)) {
+              const values = _attrs[key] || ''
+
+              if (scopedCls.classNames.some(c => values.includes(c))) {
+                return true
+              }
+            }
+          }
+
+          return false
+        }
 
         if (
-          (scopedClasses.tags[node.tag] ||
-            scopedClasses.classNames.some(c => classNames.includes(c))) &&
+          (scopedCls.tags[node.tag] || includes(attrs)) &&
           !classNames.includes(scopedHash)
         ) {
           node.attrs.class = `${scopedHash} ${classNames}`.trim()
@@ -825,6 +890,7 @@ function parseStyleAndScript(
       promises.length = 0
     }
 
+    // assets
     if (options.mode !== 'development' && scopedClasses && scopedClasses.assetsCache.size) {
       const div: any = {
         tag: 'div',
