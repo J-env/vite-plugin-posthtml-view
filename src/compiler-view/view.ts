@@ -172,6 +172,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
   const extractCache = new Map<ResolveId, CssCache>()
   const extractList: ResolveId[] = []
   const hasExtract = typeof styled.extract === 'function'
+  const jsExt = js.type === 'ts' ? 'ts' : 'js'
 
   tree.match(match('style'), function (node) {
     const css = toString(node.content)
@@ -233,8 +234,29 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     return node
   })
 
+  // has module
+  tree.match(match('script[type="module"]'), (script) => {
+    if (!mainjs && script.attrs && script.attrs.src) {
+      script.attrs.src = script.attrs.src + '?__posthtml_view__=0'
+      mainjs = script.attrs.src
+    }
+
+    return script
+  })
+
+  if (!mainjs && Array.isArray(tree)) {
+    mainjs = options.slash(from, true).replace('.html', '.' + jsExt) + '?__posthtml_view__=1'
+
+    tree.push({
+      tag: 'script',
+      attrs: {
+        type: 'module',
+        src: mainjs
+      }
+    })
+  }
+
   const jsCache = new Map<string, null>()
-  const jsExt = js.type === 'ts' ? 'ts' : 'js'
 
   const jsExtract: ExtractHandle = (obj) => {
     if (js && typeof js.extract === 'function') {
@@ -263,7 +285,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
         resolveId,
         scopedHash,
         source: content,
-        mainjs: mainjs || getMainJs(),
+        mainjs: mainjs,
         src: src.replace(`.${ext}`, '')
       })
     }
@@ -273,38 +295,6 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 
     return node
   })
-
-  function getMainJs() {
-    if (mainjs) return mainjs
-
-    let src
-
-    // has module
-    tree.match(match('script[type="module"]'), (script) => {
-      if (!src && script.attrs && script.attrs.src) {
-        script.attrs.src = script.attrs.src + '?__posthtml_view__=0'
-        src = script.attrs.src
-      }
-
-      return script
-    })
-
-    if (!src && Array.isArray(tree)) {
-      src = options.slash(from, true).replace('.html', '.' + jsExt) + '?__posthtml_view__=1'
-
-      tree.push({
-        tag: 'script',
-        attrs: {
-          type: 'module',
-          src
-        }
-      })
-    }
-
-    mainjs = src
-
-    return src
-  }
 
   const invalidSelector = new Set<string>()
 
@@ -356,7 +346,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
             styled.extract && styled.extract({
               type: 'css',
               from,
-              mainjs: mainjs || getMainJs(),
+              mainjs: mainjs,
               resolveId: css.resolveId,
               scopedHash: css.scopedHash,
               source: result.css
