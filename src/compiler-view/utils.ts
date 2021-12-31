@@ -35,6 +35,8 @@ export type OptionsUtils = Options & {
   rtl: false | RtlOptions
 }
 
+export const alpineJsReg = /^(?:x-|v-|:|@)/
+
 const hyphenateReg = /\B([A-Z])/g
 
 export function hyphenate(str: string) {

@@ -29,14 +29,16 @@
       </div>
     </div>
 
-    <div x-data="{img: '../styles/christmas.jpeg'}">
+    <div x-data="{img: '../../styles/christmas.jpeg'}">
       <img :src="img" class="mt-3 mr-1 float-left" width="328" height="338" alt="">
       <img :src="img" class="mt-3 float-left" width="328" height="338" alt="">
+
+      <img src="/styles/2022.jpg" class="mt-3 float-left" width="328" height="338" alt="">
 
       <span class="clear-both">&nbsp;</span>
     </div>
 
-    <div class="clear-both"></div>
+    <div data-src="../../styles/christmas.jpeg" class="clear-both"></div>
 
 
     <div x-data="{

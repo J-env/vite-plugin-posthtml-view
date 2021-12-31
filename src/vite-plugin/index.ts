@@ -60,6 +60,10 @@ export function vitePluginPosthtmlView(_opts?: Partial<PluginOptions>): Plugin[]
         config = _config
 
         options.root = config.root
+
+        options.assets = options.assets || {}
+        options.assets._include = config.assetsInclude
+
         options.mode = config.command === 'build' ? 'production' : 'development'
       },
 

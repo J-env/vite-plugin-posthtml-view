@@ -24,7 +24,8 @@ import {
   dynamicTest,
   isFont,
   trimAttrWhitespace,
-  cumbersomeTrim
+  cumbersomeTrim,
+  alpineJsReg
 } from './utils'
 
 import { processWithPostHtml, parseAttrsToLocals, parseTemplate } from './parser'
@@ -442,8 +443,6 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     ? options.cumbersomeTrim
     : null
 
-  const dirReg = /^(?:x-|v-|:|@)/
-
   tree.walk((node) => {
     if (node.tag && node.attrs) {
       Object.entries(node.attrs).forEach(([key, value]) => {
@@ -458,7 +457,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
           if (trimAttr) {
             val = trimAttr(value, trimAttrWhitespace)
 
-          } else if (dirReg.test(key)) {
+          } else if (alpineJsReg.test(key)) {
             val = trimAttrWhitespace(value).trim()
             val = cumbersomeTrim(val)
 
@@ -859,26 +858,55 @@ function parseStyleAndScript(
         )
       }
 
+      Object.keys(node.attrs).forEach(attrKey => {
+        if (!assets.attributes.includes(attrKey) && assets.attrRegExp.test(attrKey)) {
+          assets.attributes.push(attrKey)
+        }
+      })
+
+      const assets_include = typeof assets._include === 'function' && assets._include
+
+      const assetsHandle = (rawUrl: string) => {
+        if (!String(rawUrl).trim()) {
+          return rawUrl
+        }
+
+        if (assets_include && !assets_include(rawUrl)) {
+          return rawUrl
+        }
+
+        if (
+          isExternalUrl(rawUrl) ||
+          isDataUrl(rawUrl) ||
+          rawUrl.startsWith('#') ||
+          dynamicTest(rawUrl)
+        ) {
+          return rawUrl
+        }
+
+        let url = options.join(component.src, rawUrl)
+        url = options.slash(url, true)
+
+        scopedClasses && scopedClasses.assetsCache.add(url)
+
+        return url
+      }
+
       assets.attributes.forEach((attrKey) => {
         if (node.attrs[attrKey]) {
+
           const rawUrl = node.attrs[attrKey]
+          let replace
 
-          if (
-            !String(rawUrl).trim() ||
-            isExternalUrl(rawUrl) ||
-            isDataUrl(rawUrl) ||
-            rawUrl.startsWith('#') ||
-            dynamicTest(rawUrl)
-          ) {
-            return
-          }
+          const url = rawUrl.replace(/('|")(.*?)('|")/g, (match, a, url, c) => {
+            replace = true
 
-          let url = options.join(component.src, rawUrl)
-          url = options.slash(url, true)
+            return `${a}${assetsHandle(url)}${c}`
+          })
 
-          scopedClasses && scopedClasses.assetsCache.add(url)
-
-          node.attrs[attrKey] = url
+          node.attrs[attrKey] = !replace
+            ? assetsHandle(rawUrl)
+            : url
         }
       })
 

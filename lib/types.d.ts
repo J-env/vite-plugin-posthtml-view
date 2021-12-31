@@ -166,6 +166,14 @@ export interface Options {
          * @default ['data-src', 'data-img']
          */
         attributes: string[];
+        /**
+         * @default /^(?:x-|v-|:|@)/
+         */
+        attrRegExp: RegExp;
+        /**
+         * @private
+         */
+        _include?: (file: string) => boolean;
     };
     parser: ProcessOptions;
     $attrs: '$attrs' | StringType;

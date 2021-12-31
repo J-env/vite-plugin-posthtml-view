@@ -25,6 +25,7 @@ export declare type OptionsUtils = Options & {
     components: Components;
     rtl: false | RtlOptions;
 };
+export declare const alpineJsReg: RegExp;
 export declare function hyphenate(str: string): string;
 export declare function getTag(src: string): string;
 export declare const dynamicReg: RegExp;

@@ -183,14 +183,19 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
         })
 
         const attributes = options.assets.attributes
+        const attrRegExp = options.assets.attrRegExp
 
         tree.walk((node) => {
           if (node.attrs) {
+            Object.keys(node.attrs).forEach(attrKey => {
+              if (!attributes.includes(attrKey) && attrRegExp.test(attrKey)) {
+                attributes.push(attrKey)
+              }
+            })
+
             attributes && attributes.forEach((attrKey) => {
               if (node.attrs[attrKey]) {
-                const rawUrl = node.attrs[attrKey]
-
-                node.attrs[attrKey] = assets.get(rawUrl) || rawUrl
+                node.attrs[attrKey] = replaceAssets(node.attrs[attrKey])
               }
             })
 

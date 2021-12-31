@@ -4,7 +4,7 @@ import type { Options } from '../types'
 
 import { joinPath, slashPath } from '../utils/slash'
 import { cssjanus, noflipToPlaceholder } from '../utils/rtl'
-import { OptionsUtils } from './utils'
+import { OptionsUtils, alpineJsReg } from './utils'
 import { processWithPostHtml, parseGlobalComponents } from './parser'
 import { parse } from './view'
 
@@ -34,6 +34,7 @@ export function compilerViewPlugin(_options: Partial<Options>) {
   }
 
   options.assets.attributes = options.assets.attributes || ['data-src', 'data-img']
+  options.assets.attrRegExp = options.assets.attrRegExp || alpineJsReg
 
   options.styled = {
     type: 'scoped',
