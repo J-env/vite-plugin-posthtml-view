@@ -205,9 +205,9 @@ export interface Options {
    */
   addClassIncludes?: string[]
 
-  trimAttr?: (value: string, trim: (str: string, conservativeCollapse?: boolean) => string) => string
+  trimAttr?: (attr: string, value: string, trim: (str: string, conservativeCollapse?: boolean) => string) => string
 
-  cumbersomeTrim?: (value: string) => string
+  cumbersomeTrim?: (attr: string, value: string) => string
 
   assets: {
     /**

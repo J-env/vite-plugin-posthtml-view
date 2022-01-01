@@ -101,12 +101,6 @@ export function trimAttrWhitespace(str: string, conservativeCollapse: boolean = 
   return trimWhitespace(str).replace(/\s*;\s*/g, ';')
 }
 
-export function cumbersomeTrim(str: string) {
-  return str
-    .replace(/^{\s+/g, '{')
-    .replace(/\s+}$/g, '}')
-}
-
 export const htmlElements = [
   'a',
   'abbr',

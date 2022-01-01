@@ -24,7 +24,6 @@ import {
   dynamicTest,
   isFont,
   trimAttrWhitespace,
-  cumbersomeTrim,
   alpineJsReg
 } from './utils'
 
@@ -448,6 +447,55 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     ? options.cumbersomeTrim
     : null
 
+  const trimContent = (attr: string, content: string) => {
+    if (typeof content === 'string' && content.trim()) {
+      if (trimAttr) {
+        return trimAttr(attr, content, trimAttrWhitespace)
+      }
+
+      if (attr === 'application/ld+json' || alpineJsReg.test(attr)) {
+        content = trimAttrWhitespace(content).trim()
+
+        content = content
+          .replace(/^{\s+/g, '{')
+          .replace(/\s+}$/g, '}')
+
+        if (_cumbersomeTrim) {
+          content = _cumbersomeTrim(attr, content)
+
+        } else {
+          const placeh = '[<?=@#$%!*&^@?>]'
+          let matchs: string[] = []
+
+          // .replace(/\s+(&&|\|\|)\s+/g, '$1')
+
+          let str = ''
+
+          content
+            .replace(/('|")(.*?)('|")/g, (match, a, s, c) => {
+              matchs.push(`${a}${s}${c}`)
+              return placeh
+
+            })
+            .replace(/\s+(&&|\|\||===?|!==?|<=|>=|\+=|-=)\s+/g, '$1')
+            .replace(/\s*\?\s*(.*?)\s*:\s*/g, '?$1:')
+            .replace(/(?<=[():\[\],\{\}"!'=])\s+/g, '')
+            .replace(/\s+(?=[():\[\],\{\}"!'=])/g, '')
+            .split(placeh)
+            .forEach((item, i) => {
+              str = str + item + (matchs[i] || '')
+            })
+
+          content = str
+        }
+      }
+
+      return content
+    }
+
+    return null
+  }
+
   tree.walk((node) => {
     if (node.tag && node.attrs) {
       Object.entries(node.attrs).forEach(([key, value]) => {
@@ -456,29 +504,41 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
           return
         }
 
-        if (typeof value === 'string' && value.trim()) {
-          let val = value
+        const val = trimContent(key, value || '')
 
-          if (trimAttr) {
-            val = trimAttr(value, trimAttrWhitespace)
-
-          } else if (alpineJsReg.test(key)) {
-            val = trimAttrWhitespace(value).trim()
-            val = cumbersomeTrim(val)
-
-            if (_cumbersomeTrim) {
-              val = _cumbersomeTrim(val)
-            }
-          }
-
+        if (val) {
           node.attrs[key] = val
         }
       })
+
+      if (
+        node.tag === 'script' &&
+        node.attrs.type === 'application/ld+json' &&
+        node.content
+      ) {
+        const json = trimContent(node.attrs.type, [].concat(node.content as []).join(''))
+
+        if (json) node.content = [json]
+      }
 
       node.attrs.class = (node.attrs.class || '').trim()
 
       if (!node.attrs.class) {
         delete node.attrs.class
+      }
+    }
+
+    if (node.tag) {
+      node.attrs = node.attrs || {}
+
+      // fix img alt
+      if (node.tag === 'img') {
+        node.attrs.alt = node.attrs.alt || ''
+      }
+
+      // fix button type
+      if (node.tag === 'button') {
+        node.attrs.type = node.attrs.type || 'button'
       }
     }
 

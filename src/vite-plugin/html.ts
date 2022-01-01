@@ -7,7 +7,7 @@ const defaultMinifyOptions: MinifyOptions = {
   collapseBooleanAttributes: true,
   collapseInlineTagWhitespace: true,
   collapseWhitespace: true,
-  // conservativeCollapse: false,
+  conservativeCollapse: false,
   // continueOnParseError: false,
   // customAttrAssign: [],
   // customAttrCollapse: /x-data|:class/,
@@ -27,7 +27,7 @@ const defaultMinifyOptions: MinifyOptions = {
   // preserveLineBreaks: false,
   // preventAttributesEscaping: false,
   // processConditionalComments: false,
-  processScripts: ['application/ld+json'],
+  // processScripts: ['application/ld+json'],
   // quoteCharacter: undefined,
   removeAttributeQuotes: true,
   removeComments: true,
@@ -63,6 +63,8 @@ export async function minifyHtml(html: string, options: PluginOptions) {
     : {
       ...defaultMinifyOptions,
       ...options.minifyHtml,
+      // danger
+      removeTagWhitespace: false,
     }
   )
 
@@ -70,6 +72,9 @@ export async function minifyHtml(html: string, options: PluginOptions) {
 
   if (typeof options.minifyHtmlAfter === 'function') {
     html = options.minifyHtmlAfter(html)
+
+  } else {
+    html = html.replace(/>(\s+)</g, '><')
   }
 
   return html

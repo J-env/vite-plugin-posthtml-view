@@ -190,7 +190,9 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           if (typeof node === 'string') return node
 
           if (node.attrs) {
-            Object.keys(node.attrs).forEach(attrKey => {
+            const attrs = Object.keys(node.attrs)
+
+            attrs.forEach(attrKey => {
               if (!assetsAttrs.includes(attrKey) && attrRegExp.test(attrKey)) {
                 assetsAttrs.push(attrKey)
               }
@@ -218,7 +220,8 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
 
               const blurryAttrs = [
                 ...minifyOptions.blurryAttrs,
-                /^([xv]-bind)?:class|^[xv]-data|^[xv]-scope/,
+                // /^([xv]-bind)?:class|^[xv]-data|^[xv]-scope/,
+                /^([xv]-bind)?:class/,
               ]
 
               const asReplace = (arr, attr: string) => arr.some(item => {
@@ -239,12 +242,15 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                 return false
               }
 
-              const attrs = Object.keys(node.attrs)
-
               attrs.forEach((attr) => {
                 if (attr === 'id' || attr === 'class') return
 
-                if (!(node.attrs[attr] as string || '').trim()) {
+                // true
+                if (typeof node.attrs[attr] !== 'string') {
+                  return
+                }
+
+                if (typeof node.attrs[attr] === 'string' && !node.attrs[attr].trim()) {
                   return
                 }
 
@@ -252,7 +258,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                   node.attrs[attr] = joinValues(node.attrs[attr], false, skip)
 
                 } else if (asReplace(blurryAttrs, attr)) {
-                  const rawValue = node.attrs[attr]
+                  const rawValue: string = node.attrs[attr] || ''
                   let replace
 
                   const value = rawValue.replace(/('|")(.*?)('|")/g, (match, a, val, c) => {
@@ -262,6 +268,15 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                   })
 
                   node.attrs[attr] = replace ? value : rawValue
+
+                } else if (buildClass.length) {
+                  buildClass.forEach(item => {
+                    if (node.attrs[attr].includes(item)) {
+                      const a = joinValues(item)
+
+                      node.attrs[attr] = replaceAll(node.attrs[attr], item, a)
+                    }
+                  })
                 }
               })
 
@@ -426,6 +441,32 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           if (typeof options.generateUsePlugins === 'function') {
             _tree = options.generateUsePlugins(tree)
           }
+
+          const bools = [
+            'crossorigin',
+            'nomodule',
+            'defer',
+            'async',
+            'hidden',
+            'x-transition',
+            'x-ignore',
+            'x-cloak',
+            'x-collapse'
+          ]
+
+          tree.walk((node) => {
+            if (node.attrs) {
+              const attrs = Object.keys(node.attrs)
+
+              attrs.forEach((attrKey) => {
+                if (node.attrs[attrKey] === '' && bools.some(item => item.indexOf(attrKey) === 0)) {
+                  node.attrs[attrKey] = true
+                }
+              })
+            }
+
+            return node
+          })
 
           return _tree || tree
         })
