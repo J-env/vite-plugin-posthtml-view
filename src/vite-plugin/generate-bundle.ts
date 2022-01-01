@@ -41,6 +41,7 @@ const defaultMinifyOptions: MinifyClassnames = {
   upperCase: true,
   filters: [/^(\.|#)js-/],
   attributes: [],
+  blurryAttrs: [],
   prefix: '',
   __cache_file__: ''
 }
@@ -182,18 +183,20 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           return div
         })
 
-        const attributes = options.assets.attributes
+        const assetsAttrs = options.assets.attributes
         const attrRegExp = options.assets.attrRegExp
 
         tree.walk((node) => {
+          if (typeof node === 'string') return node
+
           if (node.attrs) {
             Object.keys(node.attrs).forEach(attrKey => {
-              if (!attributes.includes(attrKey) && attrRegExp.test(attrKey)) {
-                attributes.push(attrKey)
+              if (!assetsAttrs.includes(attrKey) && attrRegExp.test(attrKey)) {
+                assetsAttrs.push(attrKey)
               }
             })
 
-            attributes && attributes.forEach((attrKey) => {
+            assetsAttrs && assetsAttrs.forEach((attrKey) => {
               if (node.attrs[attrKey]) {
                 node.attrs[attrKey] = replaceAssets(node.attrs[attrKey])
               }
@@ -202,62 +205,106 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
             if (node.attrs.style) {
               node.attrs.style = replaceAssets(node.attrs.style)
             }
-          }
 
-          if (minifyOptions && node.attrs) {
-            if (minifyOptions.attributes && minifyOptions.attributes.length) {
+            const buildClass = (node.attrs['view-build-class'] || '').split(' ').filter(Boolean)
+
+            delete node.attrs['view-build-class']
+
+            if (minifyOptions) {
+              const attributes = [
+                ...minifyOptions.attributes,
+                /^[xv]-transition/,
+              ]
+
+              const blurryAttrs = [
+                ...minifyOptions.blurryAttrs,
+                /^([xv]-bind)?:class|^[xv]-data|^[xv]-scope/,
+              ]
+
+              const asReplace = (arr, attr: string) => arr.some(item => {
+                if (typeof item === 'string') return item === attr
+
+                return item.test && item.test(attr)
+              })
+
+              const skip = (val: string) => {
+                if (config.assetsInclude(val)) {
+                  return true
+                }
+
+                if (buildClass.length) {
+                  return !buildClass.includes(val)
+                }
+
+                return false
+              }
+
               const attrs = Object.keys(node.attrs)
 
-              minifyOptions.attributes.forEach((item) => {
-                if (item === 'id' || item === 'class') return
+              attrs.forEach((attr) => {
+                if (attr === 'id' || attr === 'class') return
 
-                const at = attrs.find(attr => attr.includes(item))
+                if (!(node.attrs[attr] as string || '').trim()) {
+                  return
+                }
 
-                if (at) {
-                  node.attrs[at] = joinValues(node.attrs[at])
+                if (asReplace(attributes, attr)) {
+                  node.attrs[attr] = joinValues(node.attrs[attr], false, skip)
+
+                } else if (asReplace(blurryAttrs, attr)) {
+                  const rawValue = node.attrs[attr]
+                  let replace
+
+                  const value = rawValue.replace(/('|")(.*?)('|")/g, (match, a, val, c) => {
+                    replace = true
+
+                    return `${a}${joinValues(val, false, skip)}${c}`
+                  })
+
+                  node.attrs[attr] = replace ? value : rawValue
                 }
               })
-            }
 
-            if (node.attrs.class) {
-              node.attrs.class = joinValues(node.attrs.class)
-            }
-
-            if (node.attrs.id) {
-              node.attrs.id = joinValues(node.attrs.id, true)
-            }
-
-            if (node.attrs['for']) {
-              const forId = htmlFor(node.attrs['for'])
-
-              if (forId) {
-                node.attrs['for'] = forId
+              if (node.attrs.class) {
+                node.attrs.class = joinValues(node.attrs.class)
               }
-            }
 
-            // svg fill="url(#id)"
-            const urls = ['mask', 'fill', 'filter']
+              if (node.attrs.id) {
+                node.attrs.id = joinValues(node.attrs.id, true)
+              }
 
-            urls.forEach((item) => {
-              if (node.attrs[item]) {
-                const tagId = useTagId(node.attrs[item].replace(/url\((.*?)\)/g, '$1'))
+              if (node.attrs['for']) {
+                const forId = htmlFor(node.attrs['for'])
 
-                if (tagId) {
-                  node.attrs[item] = `url(${tagId})`
+                if (forId) {
+                  node.attrs['for'] = forId
                 }
               }
-            })
 
-            // svg
-            if (
-              node.tag === 'use' &&
-              (node.attrs.href || node.attrs['xlink:href'])
-            ) {
-              const useAttr = node.attrs.href ? 'href' : 'xlink:href'
-              const tagId = useTagId(node.attrs[useAttr] || '')
+              // svg fill="url(#id)"
+              const urls = ['mask', 'fill', 'filter']
 
-              if (tagId) {
-                node.attrs[useAttr] = tagId
+              urls.forEach((item) => {
+                if (node.attrs[item]) {
+                  const tagId = useTagId(node.attrs[item].replace(/url\((.*?)\)/g, '$1'))
+
+                  if (tagId) {
+                    node.attrs[item] = `url(${tagId})`
+                  }
+                }
+              })
+
+              // svg
+              if (
+                node.tag === 'use' &&
+                (node.attrs.href || node.attrs['xlink:href'])
+              ) {
+                const useAttr = node.attrs.href ? 'href' : 'xlink:href'
+                const tagId = useTagId(node.attrs[useAttr] || '')
+
+                if (tagId) {
+                  node.attrs[useAttr] = tagId
+                }
               }
             }
           }
@@ -352,6 +399,13 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
               }).join('')
             }
 
+            return node
+          })
+
+        } else {
+          tree.match(match('html'), (node) => {
+            node.attrs = node.attrs || {}
+            node.attrs.dir = 'ltr'
             return node
           })
         }

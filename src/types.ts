@@ -110,9 +110,15 @@ export interface MinifyClassnames {
 
   /**
    * @example ['x-transition']
+   * ['js-class', 'x-transition']
    * @default []
    */
-  attributes: string[]
+  attributes: (RegExp | string)[]
+
+  /**
+   * [/^([xv]-bind)?:class|^[xv]-data|^[xv]-scope/]
+   */
+  blurryAttrs: (RegExp | string)[]
 
   /**
    * @default ''

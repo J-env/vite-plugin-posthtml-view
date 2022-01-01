@@ -269,7 +269,7 @@ export function useTagId(href: string) {
 const phpReg = /\\?%\\?}(.*?)\\?{\\?%/gs
 const phpReg2 = /\s+(\\?{\\?%)/g
 
-export function joinValues(values: string, id?: boolean) {
+export function joinValues(values: string, id?: boolean, filter?: (val: string) => boolean) {
   if (!values) return values
 
   if (!id) {
@@ -283,6 +283,12 @@ export function joinValues(values: string, id?: boolean) {
 
       if (isFiltered(val, id)) {
         return val
+      }
+
+      if (typeof filter === 'function') {
+        if (filter(val)) {
+          return val
+        }
       }
 
       const v = !id ? addClassesValues(val) : addIdValues(val)

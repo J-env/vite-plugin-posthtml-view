@@ -249,6 +249,11 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
   // has module
   tree.match(match('script[type="module"]'), (script) => {
     if (!mainjs && script.attrs && script.attrs.src) {
+
+      if (/^(https?:)?\/\//.test(script.attrs.src)) {
+        return script
+      }
+
       script.attrs.src = script.attrs.src + '?__posthtml_view__=0'
       mainjs = script.attrs.src
     }
