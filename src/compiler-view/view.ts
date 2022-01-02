@@ -145,7 +145,7 @@ type ResolveId = string
 async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
   const { styled, js, from, mode, rtl } = options
   const isDev = mode === 'development'
-  const headStyleId = ''
+  const headStyleId = '@'
   const attrIdKey = '__posthtml_view_css__'
 
   let mainjs = ''
@@ -260,16 +260,22 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     return script
   })
 
-  if (!mainjs && Array.isArray(tree)) {
+  function getMainjs() {
+    if (mainjs) return mainjs
+
     mainjs = options.slash(from, true).replace('.html', '.' + jsExt) + '?__posthtml_view__=1'
 
-    tree.push({
-      tag: 'script',
-      attrs: {
-        type: 'module',
-        src: mainjs
-      }
-    })
+    if (Array.isArray(tree)) {
+      tree.push({
+        tag: 'script',
+        attrs: {
+          type: 'module',
+          src: mainjs
+        }
+      })
+    }
+
+    return mainjs
   }
 
   const jsCache = new Map<string, null>()
@@ -301,7 +307,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
         resolveId,
         scopedHash,
         source: content,
-        mainjs: mainjs,
+        mainjs: getMainjs(),
         src: src.replace(`.${ext}`, '')
       })
     }
@@ -362,7 +368,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
             styled.extract && styled.extract({
               type: 'css',
               from,
-              mainjs: mainjs,
+              mainjs: getMainjs(),
               resolveId: css.resolveId,
               scopedHash: css.scopedHash,
               source: result.css
@@ -394,7 +400,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
           })
 
           if (styled) {
-            styled.content = [...styled.content, css.css].filter(Boolean)
+            styled.content = concatContent(styled.content, css.css)
 
           } else {
             const element: any = {
@@ -404,7 +410,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
             }
 
             if (node.content) {
-              node.content = [...node.content, element]
+              node.content = concatContent(node.content, element)
 
             } else {
               node.content = [element]
@@ -413,7 +419,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
           break;
 
         case 'style':
-          node.content = [...node.content || [], css.css].filter(Boolean)
+          node.content = concatContent(node.content, css.css)
           break;
 
         default:
@@ -427,7 +433,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
           }
 
           if (node.content) {
-            node.content = [...node.content, element]
+            node.content = concatContent(node.content, element)
 
           } else {
             node.content = [element]
@@ -565,7 +571,30 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     throw Error('Invalid selector: ' + value)
   })
 
-  return await Promise.all(promises).then(() => tree)
+  return await Promise.all(promises).then(() => {
+    if (!isDev) {
+      tree.match(match('head'), (head) => {
+        const placeholder: any = {
+          tag: 'meta',
+          attrs: {
+            property: 'posthtml:view-head-placeholder',
+            content: '*'
+          }
+        }
+
+        if (head.content) {
+          head.content.push(placeholder)
+
+        } else {
+          head.content = [placeholder]
+        }
+
+        return head
+      })
+    }
+
+    return tree
+  })
 }
 
 /**
@@ -1162,4 +1191,8 @@ function matchComponents(tree: Tree, {
 
 function toString(css) {
   return [].concat(css || '').join('').trim()
+}
+
+function concatContent(...add) {
+  return [].concat(...add).filter(Boolean)
 }

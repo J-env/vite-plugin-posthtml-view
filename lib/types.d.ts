@@ -59,6 +59,11 @@ export interface VitePluginOptions {
      * @default false
      */
     minifyClassnames: Partial<MinifyClassnames> | boolean;
+    boolAttrs?: string[];
+    /**
+     * @default true
+     */
+    preloadCss: boolean;
     /**
      * usePlugins(posthtml) => posthtml.use(plugins).use(plugins).use(plugins)
      * @default null

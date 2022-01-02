@@ -2,7 +2,7 @@ import path from 'path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { createFilter } from '@rollup/pluginutils'
 // import shell from 'shelljs'
-import posthtml, { RawNode } from 'posthtml'
+import posthtml from 'posthtml'
 import match from 'posthtml-match-helper'
 
 import type { PluginOptions, RtlOptions, MinifyClassnames } from '../types'
@@ -66,6 +66,8 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
 
   let config: ResolvedConfig
 
+  let preloadCss = options.preloadCss === false ? false : true
+
   const { type, syntax } = rtl ? rtl : defaultRtlOptions
 
   const janusCss = (css: string) => cssjanus(css, {
@@ -88,20 +90,100 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
     }
   }
 
+  const bools = [
+    'crossorigin',
+    'nomodule',
+    'defer',
+    'async',
+    'hidden',
+    'x-transition',
+    'x-ignore',
+    'x-cloak',
+    'x-collapse',
+    ...(options.boolAttrs || [])
+  ]
+
+  const assetsCss: string[] = []
+
+  function boolsAttrsHandle(tree) {
+    tree.walk((node) => {
+      if (node.attrs) {
+        const attrs = Object.keys(node.attrs)
+
+        attrs.forEach((attrKey) => {
+          if (node.attrs[attrKey] === '' && bools.some(item => item.indexOf(attrKey) === 0)) {
+            node.attrs[attrKey] = true
+          }
+        })
+      }
+
+      return node
+    })
+  }
+
   const normalizeHtml = async (source: string) => {
     return (await posthtml([])
       .use((tree) => {
         tree.match(match('head'), (head) => {
+          const links: any[] = []
+
+          tree.match.call(head, match('link[rel="stylesheet"][href]'), (link) => {
+            const attrs = link.attrs || {}
+
+            if (link.tag && attrs.href && assetsCss.some(href => attrs.href && attrs.href.includes(href))) {
+              if (preloadCss) {
+                links.push({
+                  tag: 'link',
+                  attrs: {
+                    ...attrs,
+                    rel: 'preload',
+                    as: 'style',
+                    href: attrs.href,
+                  }
+                })
+              }
+
+              links.push({
+                tag: 'link',
+                attrs
+              })
+
+              // @ts-ignore
+              link.tag = false
+            }
+
+            return link
+          })
+
+          const images: any[] = []
+
+          tree.match.call(head, match('link[rel="preload"][as="image"][href]'), (link) => {
+            const attrs = link.attrs || {}
+
+            if (link.tag && attrs.href) {
+              images.push({
+                tag: 'link',
+                attrs
+              })
+
+              // @ts-ignore
+              link.tag = false
+            }
+
+            return link
+          })
+
           const css: string[] = []
 
-          tree.match(match('style[__posthtml_view_css__]'), (style) => {
-            const content = [].concat((style.content as []) || '').join('').trim()
+          tree.match.call(head, match('style[__posthtml_view_css__]'), (style) => {
+            const content = toString(style.content)
 
-            if (content && !css.includes(content)) {
+            if (style.tag && content && !css.includes(content)) {
               css.push(content)
             }
 
-            style.tag = false as any
+            // @ts-ignore
+            style.tag = false
             delete style.content
 
             return style
@@ -112,19 +194,14 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
             content: item
           }))
 
-          if (head.content) {
-            const index = getTargetNodeIndex(head.content)
+          tree.match.call(head, match('meta[property="posthtml:view-head-placeholder"]'), (placeh) => {
+            placeh.content = [...links, ...images, ...content]
 
-            if (index === null) {
-              head.content = [...head.content, ...content]
+            // @ts-ignore
+            placeh.tag = false
 
-            } else {
-              head.content.splice(index + 1, 0, ...content)
-            }
-
-          } else {
-            head.content = content
-          }
+            return placeh
+          })
 
           return head
         })
@@ -136,7 +213,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
               return style
             }
 
-            const content = [].concat((style.content as []) || '').join('').trim()
+            const content = toString(style.content)
 
             if (content) {
               style.content = [minifyClassesHandle(content)]
@@ -442,33 +519,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
             _tree = options.generateUsePlugins(tree)
           }
 
-          const bools = [
-            'crossorigin',
-            'nomodule',
-            'defer',
-            'async',
-            'hidden',
-            'x-transition',
-            'x-ignore',
-            'x-cloak',
-            'x-collapse'
-          ]
-
-          tree.walk((node) => {
-            if (node.attrs) {
-              const attrs = Object.keys(node.attrs)
-
-              attrs.forEach((attrKey) => {
-                if (node.attrs[attrKey] === '' && bools.some(item => item.indexOf(attrKey) === 0)) {
-                  node.attrs[attrKey] = true
-                }
-              })
-            }
-
-            return node
-          })
-
-          return _tree || tree
+          return boolsAttrsHandle(_tree || tree)
         })
       })
       .process(source, {}))
@@ -506,9 +557,13 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
         createGenerator(minifyOptions)
       }
 
-      for (const bundle of Object.values(bundles)) {
+      const bundleValues = Object.values(bundles)
+
+      for (const bundle of bundleValues) {
         // == rtl css ========================
         if (bundle.type === 'asset' && bundle.fileName.endsWith('.css')) {
+          !assetsCss.includes(bundle.fileName) && assetsCss.push(bundle.fileName)
+
           let source = stringSource(bundle.source)
 
           if (minifyOptions) {
@@ -528,7 +583,9 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
             })
           }
         }
+      }
 
+      for (const bundle of bundleValues) {
         // == html ========================
         if (bundle.type === 'asset' && filter(bundle.fileName)) {
           let source = stringSource(bundle.source)
@@ -557,7 +614,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
           bundle.name = name
 
           if (rtl && type === 'new-html') {
-            const html = (await posthtml([])
+            let html = (await posthtml([])
               .use((tree) => {
                 tree.match(match('html'), (node) => {
                   node.attrs = node.attrs || {}
@@ -587,11 +644,13 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                   return style
                 })
 
-                return tree
+                return boolsAttrsHandle(tree)
               })
               .process(source, {})).html
 
             if (html) {
+              html = await minifyHtml(html, options)
+
               this.emitFile({
                 type: 'asset',
                 fileName: fileName.replace(/\.(html?|php)/g, '.rtl.$1'),
@@ -605,7 +664,8 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
         // == remove css in js ========================
         // @TODO:
         if (
-          bundle.type === 'chunk' && bundle.fileName.includes('-legacy') &&
+          bundle.type === 'chunk' &&
+          bundle.fileName.includes('-legacy') &&
           typeof options.removeCssInJs === 'function'
         ) {
           const code = options.removeCssInJs(stringSource(bundle.code))
@@ -677,40 +737,14 @@ function stringSource(source: string | Uint8Array) {
   return source
 }
 
-function getTargetNodeIndex(content) {
-  const length = content.length
-
-  // [].splice
-  let index: number | null = null
-
-  for (let i = length - 1; i >= 0; i--) {
-    const elem = content[i] as RawNode
-
-    if (typeof elem === 'string') {
-      continue
-    }
-
-    const attrs = elem.attrs || {}
-
-    const hasLinkCss = (elem.tag === 'link' && attrs.rel === 'stylesheet')
-
-    const hasModule = hasLinkCss ||
-      (elem.tag === 'link' && attrs.rel === 'modulepreload') ||
-      (elem.tag === 'script' && attrs.type === 'module' && attrs.src)
-
-    if (hasModule) {
-      index = i
-      break
-    }
-  }
-
-  return index
-}
-
 function replaceAll(str: string, searchValue: string, replaceValue: string) {
   while (str.includes(searchValue)) {
     str = str.replace(searchValue, replaceValue)
   }
 
   return str
+}
+
+function toString(...css) {
+  return [].concat(...css).filter(Boolean).join('').trim()
 }
