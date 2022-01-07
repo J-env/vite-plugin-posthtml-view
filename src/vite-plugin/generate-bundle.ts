@@ -104,6 +104,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
   ]
 
   const assetsCss: string[] = []
+  const assetsJs: string[] = []
 
   function boolsAttrsHandle(tree) {
     tree.walk((node) => {
@@ -126,6 +127,13 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
       .use((tree) => {
         tree.match(match('head'), (head) => {
           const links: any[] = []
+
+          tree.match.call(head, match('link[rel="preload"][as="style"][href]'), (link) => {
+            // @ts-ignore
+            link.tag = false
+
+            return link
+          })
 
           tree.match.call(head, match('link[rel="stylesheet"][href]'), (link) => {
             const attrs = link.attrs || {}
@@ -153,6 +161,23 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
             }
 
             return link
+          })
+
+          tree.match.call(head, match('script[type="module"][src],link[rel="modulepreload"][href]'), (node) => {
+            const attrs = node.attrs || {}
+            const href = attrs.href || attrs.src
+
+            if (node.tag && href && assetsJs.some(js => href.includes(js))) {
+              links.push({
+                tag: node.tag,
+                attrs
+              })
+
+              // @ts-ignore
+              node.tag = false
+            }
+
+            return node
           })
 
           const images: any[] = []
@@ -560,6 +585,10 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
       const bundleValues = Object.values(bundles)
 
       for (const bundle of bundleValues) {
+        if (bundle.fileName.endsWith('.js')) {
+          !assetsJs.includes(bundle.fileName) && assetsJs.push(bundle.fileName)
+        }
+
         // == rtl css ========================
         if (bundle.type === 'asset' && bundle.fileName.endsWith('.css')) {
           !assetsCss.includes(bundle.fileName) && assetsCss.push(bundle.fileName)

@@ -111,7 +111,7 @@ export interface MinifyClassnames {
 
   /**
    * .js-click, #js-dom
-   * @default [/^(\.|#)js-/, 'vite-legacy-polyfill', 'vite-legacy-entry']
+   * @default [/^(\.|#)js-/, '#vite-legacy-polyfill', '#vite-legacy-entry']
    */
   filters: (RegExp | string)[]
 
