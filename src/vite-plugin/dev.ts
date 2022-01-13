@@ -1,10 +1,11 @@
 import path from 'path'
 import fse from 'fs-extra'
+import shell from 'shelljs'
 
 export async function requireMock(jspath: string, originalUrl: string, hot: boolean = true) {
   let mock: null | Record<string, any> = null
 
-  if (jspath) {
+  if (shell.test('-f', jspath)) {
     try {
       let raw: any = null
 
