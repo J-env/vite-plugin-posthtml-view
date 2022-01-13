@@ -107,9 +107,10 @@ export function processWithPostHtml(
 }
 
 export function parseAttrsToLocals(
-  locals: Record<string, any>,
+  component: ComponentMeta,
   attrs: RawNode['attrs'],
-  options: OptionsUtils
+  options: OptionsUtils,
+  isPage: boolean
 ) {
   const $attrs = {}
 
@@ -118,8 +119,17 @@ export function parseAttrsToLocals(
     $attrs[key] = transformValue(value)
   })
 
+  const env = {
+    MODE: options.mode,
+    DEV: options.mode === 'development',
+    PROD: options.mode === 'production',
+    PAGE: options.slash(options.from, true)
+  }
+
   const _locals = {
-    [options.$attrs]: merge({}, options.locals, locals, $attrs)
+    [options.$attrs]: merge({}, options.locals, component.locals, $attrs, {
+      env
+    })
   }
 
   return expressions({ locals: _locals })

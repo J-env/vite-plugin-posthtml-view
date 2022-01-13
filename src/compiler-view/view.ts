@@ -86,7 +86,7 @@ export function parse(options: OptionsUtils) {
 
           promises.push(
             readComponentFile(component, options.encoding)
-              .then(parseComponent(node, component, options))
+              .then(parseComponent(node, component, options, isPage))
               .then((tree) => {
                 const _options = {
                   ...options,
@@ -603,7 +603,8 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 function parseComponent(
   node: RawNode,
   component: ComponentMeta,
-  options: OptionsUtils
+  options: OptionsUtils,
+  isPage: boolean
 ) {
   return function (html: string) {
     if (typeof options.htmlProcessor === 'function') {
@@ -616,7 +617,7 @@ function parseComponent(
       html,
       [
         parseStyleAndScript(node, component, options),
-        parseAttrsToLocals(component.locals, node.attrs, options)
+        parseAttrsToLocals(component, node.attrs, options, isPage)
       ]
     )
   }

@@ -34,7 +34,7 @@ const defaultMinifyOptions: MinifyOptions = {
   removeEmptyAttributes: false,
   // removeEmptyElements: false,
   // removeOptionalTags: false,
-  removeRedundantAttributes: true,
+  removeRedundantAttributes: false,
   removeScriptTypeAttributes: true,
   removeStyleLinkTypeAttributes: true,
 
