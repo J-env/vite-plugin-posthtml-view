@@ -1,16 +1,10 @@
 import path from 'path'
 import fse from 'fs-extra'
-import shell from 'shelljs'
 
-export async function requireMock(tspath: string, hot: boolean = true) {
+export async function requireMock(jspath: string, originalUrl: string, hot: boolean = true) {
   let mock: null | Record<string, any> = null
 
-  if (tspath) {
-    const isTs = shell.test('-f', tspath)
-
-    const jspath = tspath.replace('.ts', '.js')
-    const isJs = isTs || shell.test('-f', jspath)
-
+  if (jspath) {
     try {
       let raw: any = null
 
@@ -20,17 +14,18 @@ export async function requireMock(tspath: string, hot: boolean = true) {
         }
       }
 
-      if (isTs) {
-        clean(tspath)
-        raw = require(tspath)
-
-      } else if (isJs) {
-        clean(jspath)
-        raw = require(jspath)
-      }
+      clean(jspath)
+      raw = require(jspath)
 
       if (raw) {
-        mock = raw.__esModule ? raw.default : raw
+        raw = raw.__esModule ? raw.default : raw
+
+        if (typeof raw === 'function') {
+          mock = raw(originalUrl)
+
+        } else {
+          mock = raw
+        }
       }
 
     } catch (e) {

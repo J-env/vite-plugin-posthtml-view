@@ -7,6 +7,10 @@ if ($model->_REGISTER_GLOBAL_MODEL) {
   }
 }
 
+function at($a) {
+  return '@' . $a;
+}
+
 set_include_path($model->_VIEWS_PATH);
 
 include "$model->_TEMPLATE";

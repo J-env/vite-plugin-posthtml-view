@@ -13,7 +13,11 @@ interface ModelProps extends Record<string, any> {
   _VIEWS_PATH?: string
 }
 
-export async function phpRenderToHtml(filename: string, input: Input): Promise<string> {
+export async function phpRenderToHtml(
+  filename: string,
+  args: string[] | undefined,
+  input: Input
+): Promise<string> {
   const { __views, ...rest } = input
 
   const model: ModelProps = rest
@@ -28,9 +32,13 @@ export async function phpRenderToHtml(filename: string, input: Input): Promise<s
   const json = JSON.stringify(model, circular())
 
   // e.g. php loader.php <<< '["array entry", "another", "etc"]'
-  const { stdout } = await execa('php', [path.join(__dirname, '/loader.php')], {
-    input: json
-  })
+  const { stdout } = await execa(
+    'php',
+    args && args.length ? args : [path.join(__dirname, '/loader.php')],
+    {
+      input: json
+    }
+  )
 
   return stdout
 }

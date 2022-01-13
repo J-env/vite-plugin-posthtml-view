@@ -155,11 +155,11 @@ export const transformHandle: Handle = (
           const mockPath = path.join(
             config.root,
             options.mocksDirectory,
-            file.replace('.html', '.ts')
+            file.replace('.html', '.js')
           )
 
           const [mock, { tplFileName, __views }] = await Promise.all([
-            requireMock(mockPath, true),
+            requireMock(mockPath, ctx.originalUrl || '', true),
             writeTemplate(
               html,
               config.root,
@@ -168,7 +168,7 @@ export const transformHandle: Handle = (
             )
           ])
 
-          html = await phpRenderToHtml(tplFileName, {
+          html = await phpRenderToHtml(tplFileName, options.php.args, {
             __views: __views,
             ...mock
           })

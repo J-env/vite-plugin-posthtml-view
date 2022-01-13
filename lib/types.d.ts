@@ -38,6 +38,7 @@ export interface VitePluginOptions {
      */
     php?: {
         rename?: boolean;
+        args?: string[];
         devRender?: (params: {
             html: string;
             options: VitePluginOptions & Options;
