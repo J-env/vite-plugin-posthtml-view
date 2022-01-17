@@ -39,6 +39,7 @@ export interface VitePluginOptions {
     php?: {
         rename?: boolean;
         args?: string[];
+        writeTemplateBefore?: (html: string) => string;
         devRender?: (params: {
             html: string;
             options: VitePluginOptions & Options;
