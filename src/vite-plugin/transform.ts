@@ -158,6 +158,10 @@ export const transformHandle: Handle = (
             file.replace('.html', '.js')
           )
 
+          if (typeof options.php.writeTemplateBefore === 'function') {
+            html = options.php.writeTemplateBefore(html) || html
+          }
+
           const [mock, { tplFileName, __views }] = await Promise.all([
             requireMock(mockPath, ctx.originalUrl || '', true),
             writeTemplate(

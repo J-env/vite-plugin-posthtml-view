@@ -49,6 +49,8 @@ export interface VitePluginOptions {
 
     args?: string[]
 
+    writeTemplateBefore?: (html: string) => string
+
     devRender?: (params: {
       html: string
       options: VitePluginOptions & Options
