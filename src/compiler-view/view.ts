@@ -924,34 +924,34 @@ function parseStyleAndScript(
       }
 
       // Inline style
-      if (node.attrs.style) {
-        promises.push(
-          processor
-            .process(node.attrs.style, { ...postcssrc_sync.options, from: component.src || undefined })
-            .then(result => {
-              const s = '.__posthtml_view_inline_css_123456_abcdef__{'
-              const ast = postcssScopedParser(
-                `${s}${result.css}}`,
-                component.resolveId,
-                options,
-                component.src,
-                '',
-                '',
-                true
-              )
+      // if (node.attrs.style) {
+      //   promises.push(
+      //     processor
+      //       .process(node.attrs.style, { ...postcssrc_sync.options, from: component.src || undefined })
+      //       .then(result => {
+      //         const s = '.__posthtml_view_inline_css_123456_abcdef__{'
+      //         const ast = postcssScopedParser(
+      //           `${s}${result.css}}`,
+      //           component.resolveId,
+      //           options,
+      //           component.src,
+      //           '',
+      //           '',
+      //           true
+      //         )
 
-              ast.scopedClasses.assetsCache.forEach((e) => {
-                scopedClasses && scopedClasses.assetsCache.add(e)
-              })
+      //         ast.scopedClasses.assetsCache.forEach((e) => {
+      //           scopedClasses && scopedClasses.assetsCache.add(e)
+      //         })
 
-              ast.scopedClasses.assetsCache.clear()
+      //         ast.scopedClasses.assetsCache.clear()
 
-              const css = ast.css.replace(s, '').replace('}', '')
+      //         const css = ast.css.replace(s, '').replace('}', '')
 
-              node.attrs && (node.attrs.style = cssjanus(css))
-            })
-        )
-      }
+      //         node.attrs && (node.attrs.style = cssjanus(css))
+      //       })
+      //   )
+      // }
 
       Object.keys(node.attrs).forEach(attrKey => {
         if (!assets.attributes.includes(attrKey) && assets.attrRegExp.test(attrKey)) {
