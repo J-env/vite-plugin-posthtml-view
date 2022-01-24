@@ -53,7 +53,7 @@ export function getTag(src: string) {
   return toValidCSSIdentifier(tag.join('-'), '-')
 }
 
-export const dynamicReg = /\\?{\\?%(\\?:|\\?#)(.*?)\\?%\\?}/gs
+export const dynamicReg = /\\?{\\?@(\\?:|\\?#)(.*?)\\?@\\?}/gs
 
 export function dynamicTest(css: string) {
   const bool = !!(css && dynamicReg.test(css))

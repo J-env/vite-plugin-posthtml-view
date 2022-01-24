@@ -266,8 +266,8 @@ export function useTagId(href: string) {
   }
 }
 
-const phpReg = /\\?%\\?}(.*?)\\?{\\?%/gs
-const phpReg2 = /\s+(\\?{\\?%)/g
+const phpReg = /\\?@\\?}(.*?)\\?{\\?@/gs
+const phpReg2 = /\s+(\\?{\\?@)/g
 
 export function joinValues(values: string, id?: boolean, filter?: (val: string) => boolean) {
   if (!values) return values

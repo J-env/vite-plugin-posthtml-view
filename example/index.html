@@ -5,23 +5,15 @@
       <my-button></my-button> => @see: /example/_layout/global-components.html
     -->
 
-    <div
-      id="home"
-      class="float-left"
-    >home page</div>
+    <link itemprop="contentUrl" href="<?= $hello ?>" />
 
-    <div
-      id="home1"
-      class="float-left"
-      at="<?= at('test') ?>"
-    >
+    <div id="home" class="float-left">home page</div>
+
+    <div id="home1" class="float-left" at="<?= at('test') ?>">
       <?= $hello ?>
     </div>
 
-    <div
-      id="home2"
-      class="float-left"
-    >home page</div>
+    <div id="home2" class="float-left">home page</div>
 
     <my-button>button click</my-button>
 
@@ -35,10 +27,7 @@
       <div>this is default</div>
     </view:component> -->
 
-    <input
-      id="input1"
-      type="text"
-    >
+    <input id="input1" type="text">
     <label for="input1"></label>
 
     <br>
@@ -46,29 +35,15 @@
     <br>
 
     <div>
-      <div
-        class="img-test"
-        style="background: url(../styles/2022.jpg);"
-      >
-        <img
-          src="/styles/2022.jpg"
-          width="328"
-          height="338"
-          alt=""
-        >
+      <div class="img-test" style="background: url(../styles/2022.jpg);">
+        <img src="/styles/2022.jpg" width="328" height="338" alt="">
       </div>
 
-      <div
-        data-src="../styles/christmas.jpeg"
-        class="bg-test"
-      ></div>
+      <div data-src="../styles/christmas.jpeg" class="bg-test"></div>
     </div>
   </template>
 
-  <script
-    type="module"
-    src="/example/index.ts"
-  ></script>
+  <script type="module" src="/example/index.ts"></script>
 </layout-base>
 
 <style>

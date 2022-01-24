@@ -25,7 +25,7 @@ export const isExternalUrl = (url: string): boolean => externalRE.test(url)
 export const dataUrlRE = /^\s*data:/i
 export const isDataUrl = (url: string): boolean => dataUrlRE.test(url)
 
-const withoutEscapeReg = /({|%|:|})/g
+const withoutEscapeReg = /({|@|:|})/g
 
 export function withoutEscape(val: string) {
   return val.replace(withoutEscapeReg, '\\$1')

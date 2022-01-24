@@ -8,9 +8,9 @@ const markMap = {
   '\\#': 'php'
 }
 
-const syntaxReg = /\\{\\%(\\:|\\#)(.*?)\\%\\}/gs
+const syntaxReg = /\\{\\@(\\:|\\#)(.*?)\\@\\}/gs
 const phpReg = /<\?(=|php)(.*?)\?>/gs
-const emptyReg = /(\\%\\})=""/g
+const emptyReg = /(\\@\\})=""/g
 
 export function htmlConversion(html: string) {
   return html.replace(syntaxReg, function (_match, p1, p2) {
@@ -23,14 +23,14 @@ export function htmlConversion(html: string) {
  * 加密 html
  * @desc /<\?(=|php)(.*?)\?>/gs ($2 => hash)
  * <?= $hello ?>
- * {%:hash%}
+ * {@:hash@}
  * @param html
  */
 export function encryptHtml(html: string) {
   return html.replace(phpReg, function (_match, p1, p2) {
     const p = markMap[p1] || p1
-    // <?= $hello ?> to {%:加密的字符串%}
-    return `\\{\\%${p}${aesEncrypt(p2, aesKey)}\\%\\}`
+    // <?= $hello ?> to {@:加密的字符串@}
+    return `\\{\\@${p}${aesEncrypt(p2, aesKey)}\\@\\}`
   })
 }
 
@@ -42,7 +42,7 @@ export function decryptHtml(html: string) {
   return html
     .replace(emptyReg, '$1')
     .replace(syntaxReg, function (_match, p1, p2) {
-      return `\\{\\%${p1}${aesDecrypt(p2, aesKey)}\\%\\}`
+      return `\\{\\@${p1}${aesDecrypt(p2, aesKey)}\\@\\}`
     })
 }
 

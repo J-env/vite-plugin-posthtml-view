@@ -17,35 +17,22 @@
     <!-- <div x-data="{ expanded: false }" :class="expanded && 'expanded-demo'"
       class="p-4 border border-dark-100 rounded bg-white"> -->
 
-    <div
-      x-data="{ expanded: false }"
-      :class="{
+    <div x-data="{ expanded: false }" :class="{
       'bg-red-300  expanded-demo': expanded,
       'bg-white': !expanded
-    }"
-      class="p-4 border border-dark-100 rounded bg-white"
-    >
+    }" class="p-4 border border-dark-100 rounded bg-white">
       <div class="relative">
-        <button
-          @click="expanded = ! expanded"
-          class="bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-gray-50 text-white font-semibold h-12 px-6 rounded-lg w-full flex items-center justify-center sm:w-auto dark:bg-sky-500 dark:highlight-white/20 dark:hover:bg-sky-400"
-        >Toggle
+        <button @click="expanded = ! expanded"
+                class="bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-gray-50 text-white font-semibold h-12 px-6 rounded-lg w-full flex items-center justify-center sm:w-auto dark:bg-sky-500 dark:highlight-white/20 dark:hover:bg-sky-400">Toggle
           Content</button>
 
-        <span
-          :class="{
+        <span :class="{
           'bg-red-600': expanded,
           'bg-dark-50': !expanded
-        }"
-          class="absolute right-0 top-0 w-2.5 h-2.5 bg-dark-50 rounded-full"
-        ></span>
+        }" class="absolute right-0 top-0 w-2.5 h-2.5 bg-dark-50 rounded-full"></span>
       </div>
 
-      <div
-        x-show="expanded"
-        x-collapse
-        hidden
-      >
+      <div x-show="expanded" x-collapse hidden>
         <div class="pt-4">
           Reprehenderit eu excepteur ullamco esse cillum reprehenderit exercitation labore non. Dolore dolore ea
           dolore
@@ -56,36 +43,15 @@
     </div>
 
     <div x-data="{img: '../../styles/christmas.jpeg'}">
-      <img
-        :src="img"
-        class="mt-3 mr-1 float-left"
-        width="328"
-        height="338"
-        alt=""
-      >
-      <img
-        :src="img"
-        class="mt-3 float-left"
-        width="328"
-        height="338"
-        alt=""
-      >
+      <img :src="img" class="mt-3 mr-1 float-left" width="328" height="338" alt="">
+      <img :src="img" class="mt-3 float-left" width="328" height="338" alt="">
 
-      <img
-        src="/styles/2022.jpg"
-        class="mt-3 float-left"
-        width="328"
-        height="338"
-        alt=""
-      >
+      <img src="/styles/2022.jpg" class="mt-3 float-left" width="328" height="338" alt="">
 
       <span class="clear-both">&nbsp;&nbsp;&nbsp;&nbsp;</span>
     </div>
 
-    <div
-      data-src="../../styles/christmas.jpeg"
-      class="clear-both"
-    ></div>
+    <div data-src="../../styles/christmas.jpeg" class="clear-both"></div>
 
 
     <div x-data="{
@@ -101,26 +67,18 @@
       </div>
     </div>
 
-    <div
-      x-data="{
+    <div x-data="{
       open: false,
       name: 'test-name',
       buildClass: 'build-class-test build-class-a',
       buildClass1: 'build-class-test1 build-class-b',
-    }"
-      view-build-class="build-class-test build-class-a build-class-test1 build-class-b"
-    >
+    }" view-build-class="build-class-test build-class-a build-class-test1 build-class-b">
       <button @click="open = ! open">Toggle</button>
 
-      <div
-        x-show="open"
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0 scale-90"
-        x-transition:enter-end="opacity-100 scale-100"
-        x-transition:leave="transition ease-in duration-300"
-        x-transition:leave-start="opacity-100 scale-100"
-        x-transition:leave-end="opacity-0 scale-90"
-      >Hello 👋</div>
+      <div x-show="open" x-transition:enter="transition ease-out duration-300"
+           x-transition:enter-start="opacity-0 scale-90" x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-90">Hello 👋</div>
     </div>
 
     <ul x-data="{ colors: [
@@ -128,18 +86,12 @@
       { id: 2, label: 'Orange' },
       { id: 3, label: 'Yellow' }
   ]}">
-      <template
-        x-for="color in colors"
-        :key="color.id"
-      >
+      <template x-for="color in colors" :key="color.id">
         <li x-text="color.label"></li>
       </template>
     </ul>
 
-    <div
-      x-data="{ posts: [] }"
-      x-init="posts = await (await fetch('/')).json()"
-    >...</div>
+    <div x-data="{ posts: [] }" x-init="posts = await (await fetch('/')).json()">...</div>
 
     <div x-init="$nextTick(() => { })"></div>
 
@@ -159,67 +111,39 @@
 
     <div x-data="{ open: false }">
       <!-- Button -->
-      <button
-        x-on:click="open = true"
-        type="button"
-        class="bg-white border border-black px-4 py-2 focus:outline-none focus:ring-4"
-      >
+      <button x-intersect:enter.full="console.log(123)" x-on:click="open = true" type="button"
+              class="bg-white border border-black px-4 py-2 focus:outline-none focus:ring-4">
         Open dialog
       </button>
 
       <!-- Modal -->
       <template x-teleport="body">
-        <div
-          x-show="open"
-          x-on:keydown.escape.prevent.stop="open = false"
-          role="dialog"
-          aria-modal="true"
-          x-id="['modal-title']"
-          :aria-labelledby="$id('modal-title')"
-          class="fixed inset-0 overflow-y-auto"
-        >
+        <div x-show="open" x-on:keydown.escape.prevent.stop="open = false" role="dialog" aria-modal="true"
+             x-id="['modal-title']" :aria-labelledby="$id('modal-title')" class="fixed inset-0 overflow-y-auto">
           <!-- Overlay -->
 
           <!-- Panel -->
-          <div
-            x-show="open"
-            x-transition:enter="transition ease-out duration-300"
-            x-transition:enter-start="opacity-0 scale-90"
-            x-transition:enter-end="opacity-100 scale-100"
-            x-transition:leave="transition ease-in duration-300"
-            x-transition:leave-start="opacity-100 scale-100"
-            x-transition:leave-end="opacity-0 scale-90"
-            x-on:click="open = false"
-            class="relative min-h-screen flex items-center justify-center p-4"
-          >
+          <div x-show="open" x-transition:enter="transition ease-out duration-300"
+               x-transition:enter-start="opacity-0 scale-90" x-transition:enter-end="opacity-100 scale-100"
+               x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 scale-100"
+               x-transition:leave-end="opacity-0 scale-90" x-on:click="open = false"
+               class="relative min-h-screen flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black bg-opacity-50"></div>
 
-            <div
-              x-on:click.stop
-              x-trap.noscroll.inert="open"
-              class="relative max-w-2xl w-full bg-white border border-black p-8 overflow-y-auto"
-            >
+            <div x-on:click.stop x-trap.noscroll.inert="open"
+                 class="relative max-w-2xl w-full bg-white border border-black p-8 overflow-y-auto">
               <!-- Title -->
-              <h2
-                class="text-3xl font-medium"
-                :id="$id('modal-title')"
-              >Confirm</h2>
+              <h2 class="text-3xl font-medium" :id="$id('modal-title')">Confirm</h2>
               <!-- Content -->
               <p class="mt-2 text-gray-600">Are you sure you want to learn how to create an awesome modal?</p>
               <!-- Buttons -->
               <div class="mt-8 flex space-x-2">
-                <button
-                  type="button"
-                  x-on:click="open = false"
-                  class="bg-white border border-black px-4 py-2 focus:outline-none focus:ring-4 focus:ring-aqua-400"
-                >
+                <button type="button" x-on:click="open = false"
+                        class="bg-white border border-black px-4 py-2 focus:outline-none focus:ring-4 focus:ring-aqua-400">
                   Confirm
                 </button>
-                <button
-                  type="button"
-                  x-on:click="open = false"
-                  class="bg-white border border-black px-4 py-2 focus:outline-none focus:ring-4 focus:ring-aqua-400"
-                >
+                <button type="button" x-on:click="open = false"
+                        class="bg-white border border-black px-4 py-2 focus:outline-none focus:ring-4 focus:ring-aqua-400">
                   Cancel
                 </button>
               </div>
@@ -232,27 +156,15 @@
 
   <!-- Alpine Plugins -->
 
-  <script
-    defer
-    src="https://unpkg.com/@alpinejs/intersect@3.x.x/dist/cdn.min.js"
-  ></script>
+  <script defer src="https://unpkg.com/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
 
-  <script
-    defer
-    src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js"
-  ></script>
+  <script defer src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
 
   <!-- Alpine Core -->
 
-  <script
-    defer
-    src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"
-  ></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-  <script
-    type="module"
-    src="./index.ts"
-  ></script>
+  <script type="module" src="./index.ts"></script>
 </layout-base>
 
 <style>
