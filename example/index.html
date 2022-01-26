@@ -44,6 +44,12 @@
   </template>
 
   <script type="module" src="/example/index.ts"></script>
+
+  <script view:js="false" data-id="<?= $id ?>">
+    var $data = window.$data = window.$data || {};
+    $data.id = "<?= $id ?>";
+    $data.id1 = '<?= $id ?>';
+  </script>
 </layout-base>
 
 <style>

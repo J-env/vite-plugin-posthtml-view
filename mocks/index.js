@@ -3,5 +3,6 @@ module.exports = function (url) {
 
   return {
     hello: 'hello view:posthtml-view',
+    id: 0
   }
 }
