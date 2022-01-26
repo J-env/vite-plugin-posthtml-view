@@ -5,18 +5,24 @@ const markMap = {
   '=': '\\:',
   'php': '\\#',
   '\\:': '=',
-  '\\#': 'php'
+  '\\#': 'php',
+  ':': '=',
+  '#': 'php'
 }
 
 const syntaxReg = /\\{\\@(\\:|\\#)(.*?)\\@\\}/gs
+const syntaxReg2 = /{@(:|#)(.*?)@}/gs
 const phpReg = /<\?(=|php)(.*?)\?>/gs
 const emptyReg = /(\\@\\})=""/g
 
 export function htmlConversion(html: string) {
-  return html.replace(syntaxReg, function (_match, p1, p2) {
+  const _matchfn = function (_match, p1, p2) {
     const p = markMap[p1] || p1
     return `<?${p}${p2}?>`
-  })
+  }
+
+  return html.replace(syntaxReg, _matchfn)
+    .replace(syntaxReg2, _matchfn)
 }
 
 /**

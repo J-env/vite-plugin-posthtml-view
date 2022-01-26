@@ -48,7 +48,9 @@
   <script view:js="false" data-id="<?= $id ?>">
     var $data = window.$data = window.$data || {};
     $data.id = "<?= $id ?>";
-    $data.id1 = '<?= $id ?>';
+    $data.id1 = Number('<?= $id ?>');
+    $data.id1 = +('<?= $id ?>');
+    $data.id1 = <?= $id ?>;
   </script>
 </layout-base>
 
