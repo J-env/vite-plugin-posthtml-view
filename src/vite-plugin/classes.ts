@@ -1,7 +1,7 @@
 import type { Node, AnyNode } from 'postcss'
 import postcssSafeParser from 'postcss-safe-parser'
 import postcssSelectorParser from 'postcss-selector-parser'
-import { JSONStorage } from 'node-localstorage'
+import { LocalStorage } from 'node-localstorage'
 
 import type { MinifyClassnames } from '../types'
 import { generateName, withoutEscape } from '../utils'
@@ -10,7 +10,7 @@ import { isDynamicSelector, dynamicReg } from '../compiler-view/utils'
 let minify: MinifyClassnames
 let classGenerator: Generator<string, string, unknown>
 let idGenerator: Generator<string, string, unknown>
-let jsonStorage: JSONStorage
+let localStorage: LocalStorage
 
 interface Storage {
   classesKey: '_classes'
@@ -38,7 +38,7 @@ const ids_map: MapObj = {}
 
 function readCache(key: string, map: MapObj): Record<string, string> {
   try {
-    const data = jsonStorage.getItem(key) || {}
+    const data = JSON.parse(localStorage.getItem(key) || '{}') || {}
 
     Object.keys(data).forEach((k) => {
       const v = data[k]
@@ -53,17 +53,28 @@ function readCache(key: string, map: MapObj): Record<string, string> {
 }
 
 export async function writeCache() {
-  if (jsonStorage) {
-    jsonStorage.setItem(storage.classesKey, storage.classes)
-    jsonStorage.setItem(storage.idsKey, storage.ids)
+  if (localStorage) {
+    const classes = {}
+    const ids = {}
+
+    Object.keys(storage.classes).sort().forEach((item) => {
+      classes[item] = storage.classes[item]
+    })
+
+    Object.keys(storage.ids).sort().forEach((item) => {
+      ids[item] = storage.ids[item]
+    })
+
+    localStorage.setItem(storage.classesKey, JSON.stringify(classes, null, 2))
+    localStorage.setItem(storage.idsKey, JSON.stringify(ids, null, 2))
   }
 }
 
 export function createGenerator(_minify: MinifyClassnames) {
   minify = minify || _minify
 
-  if (minify.__cache_file__ && !jsonStorage) {
-    jsonStorage = new JSONStorage(minify.__cache_file__)
+  if (minify.__cache_file__ && !localStorage) {
+    localStorage = new LocalStorage(minify.__cache_file__)
 
     storage._classes = readCache(storage.classesKey, classes_map)
     storage._ids = readCache(storage.idsKey, ids_map)
