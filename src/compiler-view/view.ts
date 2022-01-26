@@ -838,6 +838,12 @@ function parseStyleAndScript(
           content: to_file_css
         })
       }
+    } else {
+      scopedClasses = {
+        classNames: [],
+        tags: {},
+        assetsCache: new Set()
+      }
     }
 
     // js
@@ -979,6 +985,7 @@ function parseStyleAndScript(
           return rawUrl
         }
 
+
         let url = options.join(component.src, rawUrl)
         url = options.slash(url, true)
 
@@ -991,7 +998,7 @@ function parseStyleAndScript(
         if (node.attrs[attrKey]) {
 
           const rawUrl = node.attrs[attrKey]
-          let replace
+          let replace;
 
           const url = rawUrl.replace(/('|")(.*?)('|")/g, (match, a, url, c) => {
             replace = true
