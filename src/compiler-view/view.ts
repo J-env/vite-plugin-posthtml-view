@@ -150,9 +150,17 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 
   let mainjs = ''
 
+  let hasBody = false
+
+  tree.match(match('body'), (node) => {
+    hasBody = true
+
+    return node
+  })
+
   const promises: Promise<void | Result>[] = []
 
-  if (isDev) {
+  if (isDev && hasBody) {
     tree.match(match('body'), (node) => {
       const css_container: any = {
         tag: 'div',
@@ -182,7 +190,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 
   const extractCache = new Map<ResolveId, CssCache>()
   const extractList: ResolveId[] = []
-  const hasExtract = typeof styled.extract === 'function'
+  const hasExtract = hasBody && typeof styled.extract === 'function'
   const jsExt = js.type === 'ts' ? 'ts' : 'js'
 
   tree.match(match('style'), function (node) {
@@ -193,7 +201,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
     const scopedHash = node.attrs['data-scoped-hash'] || ''
     const resolveId = node.attrs['data-resolve-id'] || ''
 
-    let to = node.attrs['data-to'] || styled.to || 'head'
+    let to = hasBody ? (node.attrs['data-to'] || styled.to || 'head') : '*'
 
     if (isDev && to !== '*') {
       to = `#${attrIdKey}`
@@ -263,9 +271,9 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
   function getMainjs() {
     if (mainjs) return mainjs
 
-    mainjs = options.slash(from, true).replace('.html', '.' + jsExt) + '?__posthtml_view__=1'
+    mainjs = !hasBody ? '' : options.slash(from, true).replace('.html', '.' + jsExt) + '?__posthtml_view__=1'
 
-    if (Array.isArray(tree)) {
+    if (hasBody && Array.isArray(tree)) {
       tree.push({
         tag: 'script',
         attrs: {
@@ -291,7 +299,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
 
     const resolveId = node.attrs['data-resolve-id'] || ''
 
-    if (resolveId && !jsCache.has(resolveId)) {
+    if (resolveId && !jsCache.has(resolveId) && hasBody) {
       jsCache.set(resolveId, null)
 
       const src = node.attrs.src || ''

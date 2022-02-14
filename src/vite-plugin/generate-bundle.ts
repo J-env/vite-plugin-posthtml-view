@@ -125,15 +125,33 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
   const normalizeHtml = async (source: string) => {
     return (await posthtml([])
       .use((tree) => {
+        let hasBody = false
+
+        tree.match(match('body'), (node) => {
+          hasBody = true
+
+          return node
+        })
+
+        if (!hasBody) {
+          tree.match(match('script[type="module"],script[nomodule]'), (node) => {
+            // @ts-ignore
+            node.tag = false
+            delete node.content
+
+            return node
+          })
+        }
+
         tree.match(match('head'), (head) => {
           const links: any[] = []
 
-          tree.match.call(head, match('link[rel="preload"][as="style"][href]'), (link) => {
-            // @ts-ignore
-            link.tag = false
+          // tree.match.call(head, match('link[rel="preload"][as="style"][href]'), (link) => {
+          //   // @ts-ignore
+          //   link.tag = false
 
-            return link
-          })
+          //   return link
+          // })
 
           tree.match.call(head, match('link[rel="stylesheet"][href]'), (link) => {
             const attrs = link.attrs || {}
@@ -432,7 +450,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
         const syntaxStyleTag = 'posthtml-view-syntax-style-x'
 
         tree.match(match('style'), (style) => {
-          let content = replaceAssets([].concat((style.content as []) || '').join('').trim())
+          let content = replaceAssets(toString(style.content))
 
           // remove noflip placeholder
           let ltrContent = content && placeholderToNoflip(content, '')
@@ -664,7 +682,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                 })
 
                 tree.match(match('style'), (style) => {
-                  const content = [].concat((style.content as []) || '').join('').trim()
+                  const content = toString(style.content)
 
                   if (content) {
                     style.content = [janusCss(content)]
