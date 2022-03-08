@@ -381,7 +381,10 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
                   const rawValue: string = node.attrs[attr] || ''
                   let replace
 
-                  const value = rawValue.replace(/('|")(.*?)('|")/g, (match, a, val, c) => {
+                  // &#039;login&#039;
+                  // "login"
+                  // 'login'
+                  const value = rawValue.replace(/(&#[^;]+;|'|")(.*?)(&#[^;]+;|'|")/g, (match, a, val, c) => {
                     replace = true
 
                     return `${a}${joinValues(val, false, skip)}${c}`

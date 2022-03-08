@@ -486,7 +486,7 @@ async function collectCssAndJs(tree: Tree, options: OptionsUtils) {
           let str = ''
 
           content
-            .replace(/('|")(.*?)('|")/g, (match, a, s, c) => {
+            .replace(/(&#[^;]+;|'|")(.*?)(&#[^;]+;|'|")/g, (match, a, s, c) => {
               matchs.push(`${a}${s}${c}`)
               return placeh
 
@@ -1008,7 +1008,7 @@ function parseStyleAndScript(
           const rawUrl = node.attrs[attrKey]
           let replace;
 
-          const url = rawUrl.replace(/('|")(.*?)('|")/g, (match, a, url, c) => {
+          const url = rawUrl.replace(/(&#[^;]+;|'|")(.*?)(&#[^;]+;|'|")/g, (match, a, url, c) => {
             replace = true
 
             return `${a}${assetsHandle(url)}${c}`
