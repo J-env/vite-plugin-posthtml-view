@@ -98,7 +98,9 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
     'hidden',
     'x-transition',
     'x-ignore',
+    'v-pre',
     'x-cloak',
+    'v-cloak',
     'x-collapse',
     ...(options.boolAttrs || [])
   ]
