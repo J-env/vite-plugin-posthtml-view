@@ -822,7 +822,7 @@ function parseStyleAndScript(
 
         style.attrs = style.attrs || {}
 
-        style.attrs['data-to'] = to
+        to && (style.attrs['data-to'] = to)
         style.attrs['data-scoped-hash'] = scopedHash
         style.attrs['data-resolve-id'] = component.resolveId
 

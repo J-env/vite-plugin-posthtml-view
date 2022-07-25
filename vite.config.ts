@@ -149,7 +149,7 @@ export default defineConfig(async (env) => {
     build: {
       sourcemap: false,
       manifest: true,
-      // minify: 'terser',
+      minify: 'terser',
       terserOptions: {
         compress: {
           keep_infinity: true,

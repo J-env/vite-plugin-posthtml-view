@@ -486,7 +486,7 @@ export function posthtmlViewBundle(options: PluginOptions, rtl: RtlOptions | fal
               })
 
               style.tag = false as any
-              style.attrs = undefined
+              style.attrs = {}
 
               return style
             }
